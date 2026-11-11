@@ -1,0 +1,25 @@
+# Data: IU X-ray is CC BY-NC-ND. Raw and cleaned data never enter the repository.
+/data/
+*.png
+*.dcm
+
+# Run outputs and checkpoints (synced to the private Hugging Face repo instead)
+/runs/
+*.pt
+*.safetensors
+
+# Credentials
+kaggle.json
+.env
+*.token
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv*/
+
+# Editors / agents
+.vscode/
+.claude/

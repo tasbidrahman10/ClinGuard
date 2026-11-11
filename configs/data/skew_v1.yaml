@@ -1,0 +1,13 @@
+# Skewed site partition, version skew_v1 (primary; plan section 5.4, decision D2).
+# Each study is assigned to a simulated site with these probabilities, given its partition group.
+# These are simulated sites from one source (IU X-ray), not real hospitals.
+version: skew_v1
+kind: skew
+split_seed: 20261110
+sites: [A, B, C]              # A "screening", B "cardiac", C "pulmonary"
+site_probabilities:
+  normal:         [0.50, 0.25, 0.25]
+  cardio_pleural: [0.15, 0.65, 0.20]
+  parenchymal:    [0.15, 0.20, 0.65]
+  other_abnormal: [0.34, 0.33, 0.33]
+roles: {train: 0.70, calibration: 0.10, development: 0.10, test: 0.10}

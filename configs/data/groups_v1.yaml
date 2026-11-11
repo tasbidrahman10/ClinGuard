@@ -1,0 +1,46 @@
+# Partition groups, version groups_v1 (plan section 5.4). CANDIDATE: frozen at gate G1 after team review.
+#
+# A study's group is decided from its human-coded MeSH field only (never from the report text).
+# Each MeSH entry looks like "Heading/attribute/attribute"; entries are separated by ";".
+# Groups are tried in the order below and the first match wins.
+#   headings:             the entry's heading equals one of these (case-insensitive)
+#   heading_with_attr:    the heading matches AND one of the listed attributes is present
+# A study that matches nothing is "other_abnormal".
+version: groups_v1
+order: [normal, cardio_pleural, parenchymal, other_abnormal]
+
+groups:
+  normal:
+    whole_field: [normal]            # the entire MeSH field is exactly "normal"
+
+  cardio_pleural:
+    headings:
+      - cardiomegaly
+      - pleural effusion
+      - pulmonary edema
+      - pulmonary congestion
+      - atherosclerosis
+    heading_with_attr:
+      cardiac shadow: [enlarged]
+      aorta: [tortuous]
+      aorta, thoracic: [tortuous]
+
+  parenchymal:
+    headings:
+      - opacity
+      - pulmonary atelectasis
+      - nodule
+      - granuloma
+      - calcified granuloma          # granuloma variant
+      - granulomatous disease        # granuloma variant
+      - infiltrate
+      - consolidation
+      - airspace disease             # not named in the plan; same family as consolidation / infiltrate
+      - pneumonia
+      - emphysema
+      - pulmonary emphysema          # emphysema variant
+      - bullous emphysema            # emphysema variant
+      - cicatrix
+      - mass
+
+  other_abnormal: {}                 # everything else

@@ -1,0 +1,7 @@
+# Versions the test suite was run with on 2026-11-11 (Python 3.11, CPU).
+# The GPU / model stack is pinned in requirements.lock at gate G3, on the Kaggle image.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0
+numpy==2.4.6
+PyYAML==6.0.3
+pytest==9.2.0

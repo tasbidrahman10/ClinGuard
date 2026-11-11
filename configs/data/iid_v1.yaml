@@ -1,0 +1,9 @@
+# IID site partition, version iid_v1 (control; plan section 5.4).
+# Every study keeps the data role (train / calibration / development / test) it has in skew_v1;
+# only the site changes. Within each role x group, studies are dealt to the sites evenly in a
+# seeded random order, so the three sites have the same size and the same group mix.
+version: iid_v1
+kind: iid
+split_seed: 20261110
+sites: [A, B, C]
+roles_from: skew_v1

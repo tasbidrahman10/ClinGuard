@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clinguard"
+version = "0.1.0"
+description = "ClinGuard-DiLoCo: clinically constrained, low-communication training for multi-site chest X-ray report generation (research code)"
+requires-python = ">=3.10"
+dependencies = ["numpy", "pyyaml", "torch"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+# GPU / model stack. Exact versions are pinned in requirements.lock at gate G3, on the Kaggle image.
+model = ["transformers", "peft", "bitsandbytes", "accelerate", "safetensors"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

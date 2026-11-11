@@ -1,0 +1,127 @@
+{
+ "partition": "iid_v1",
+ "sites": [
+  "A",
+  "B",
+  "C"
+ ],
+ "roles": [
+  "train",
+  "calibration",
+  "development",
+  "test"
+ ],
+ "files": {
+  "A_train.csv": "b164360397271a5c6d00bd0e0a54068dbe90c628905e01a09659a3f22bd4ca19",
+  "A_calibration.csv": "03cde6886e9dcd96eaab9c21573f291e77600f17b1181e1add3d02e9a36b0bd1",
+  "A_development.csv": "9ed57d4e57611d085b909e4a2674d4c49a898934eca1ec61e4b6493a104cb0cf",
+  "A_test.csv": "2b82346000de30b7b4c700262795c709b9b2470a3a2e9c5d74331bac55ce960d",
+  "B_train.csv": "c21c25e746d756a9d8262658907200d99f87043284345f72a0c1db8e7914ee4f",
+  "B_calibration.csv": "80b31babb69920414d78c3993f2b6958099de0945315824a65c117c190ebffca",
+  "B_development.csv": "630496e62276b839c22fbaae5ca098b2da73b26c2bebdc4b57071d93ffa75ac4",
+  "B_test.csv": "a3af9aace2987dceab8a047217bbc2b7e9b7f8f4971b54127bebf6dd227d337d",
+  "C_train.csv": "3017112be8fbb3d99293a5efd07809301eb39abef38b0f102bb3ed5ed66aa723",
+  "C_calibration.csv": "c6c425307c4156ea50d81405c77eadf35dab909f2c8676cd91048a04c3e2619d",
+  "C_development.csv": "2f854c717ee4dfe1ec289e175e621d5f9232bad705bfdba4e6596d5588fa4bfb",
+  "C_test.csv": "8a736b475e56effb113b7e196728677626078d9c989fe0ccbbeb5e625166bc06"
+ },
+ "counts": {
+  "A_train": {
+   "cardio_pleural": 135,
+   "normal": 271,
+   "other_abnormal": 177,
+   "parenchymal": 163,
+   "total": 746
+  },
+  "A_calibration": {
+   "cardio_pleural": 20,
+   "normal": 39,
+   "other_abnormal": 25,
+   "parenchymal": 24,
+   "total": 108
+  },
+  "A_development": {
+   "cardio_pleural": 19,
+   "normal": 39,
+   "other_abnormal": 26,
+   "parenchymal": 23,
+   "total": 107
+  },
+  "A_test": {
+   "cardio_pleural": 20,
+   "normal": 40,
+   "other_abnormal": 26,
+   "parenchymal": 24,
+   "total": 110
+  },
+  "B_train": {
+   "cardio_pleural": 134,
+   "normal": 271,
+   "other_abnormal": 176,
+   "parenchymal": 162,
+   "total": 743
+  },
+  "B_calibration": {
+   "cardio_pleural": 19,
+   "normal": 39,
+   "other_abnormal": 25,
+   "parenchymal": 23,
+   "total": 106
+  },
+  "B_development": {
+   "cardio_pleural": 20,
+   "normal": 38,
+   "other_abnormal": 25,
+   "parenchymal": 24,
+   "total": 107
+  },
+  "B_test": {
+   "cardio_pleural": 19,
+   "normal": 39,
+   "other_abnormal": 26,
+   "parenchymal": 23,
+   "total": 107
+  },
+  "C_train": {
+   "cardio_pleural": 134,
+   "normal": 271,
+   "other_abnormal": 177,
+   "parenchymal": 162,
+   "total": 744
+  },
+  "C_calibration": {
+   "cardio_pleural": 19,
+   "normal": 39,
+   "other_abnormal": 25,
+   "parenchymal": 23,
+   "total": 106
+  },
+  "C_development": {
+   "cardio_pleural": 19,
+   "normal": 39,
+   "other_abnormal": 25,
+   "parenchymal": 23,
+   "total": 106
+  },
+  "C_test": {
+   "cardio_pleural": 20,
+   "normal": 39,
+   "other_abnormal": 26,
+   "parenchymal": 24,
+   "total": 109
+  }
+ },
+ "n_studies": 3199,
+ "source": "IU X-ray (Indiana University / Open-i), Kaggle copy raddar/chest-xrays-indiana-university, version 2",
+ "raw_sha256": {
+  "indiana_reports.csv": "cd7257716f7be4aaf46e55a9ea266b69095372a2f23dc0e19e32a95b0f02e2e6",
+  "indiana_projections.csv": "7af9c8a6b4f8ae695c654ecd4208edd193a37892a5607b7cb9e609dc997e6b7a"
+ },
+ "clean_version": "clean_v1",
+ "groups_version": "groups_v1",
+ "split_seed": 20261110,
+ "cleaned_text_sha256": "4796c306ec9d957a0a1a22e38b8d16b3df95b1e676ae2b4043ff961a69a4f54d",
+ "image_check": "not_run",
+ "status": "candidate",
+ "manifest_hash": "e3e300185b13507e4d7e22151855ba76b958d8dd6b47ae3be7547c95f625c480"
+}
