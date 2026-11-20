@@ -57,14 +57,18 @@ def _git_commit():
         return None
 
 
-def run(cfg, sites, phi0, out_dir, manifest_hash=None, stop_after_round=None):
+def run(cfg, sites, phi0, out_dir, manifest_hash=None, stop_after_round=None, extra_config=None, on_round_end=None):
     """Runs (or resumes) the experiment. Returns (phi, m) after the last completed round.
 
     stop_after_round: stop once this round index is complete, leaving the checkpoint in place.
-    Used by the resume test to imitate an interrupted session.
+        Used by the resume tests to imitate an interrupted session.
+    extra_config: settings outside the engine (model, data, LoRA file, evaluation). They enter the
+        config hash, so a run refuses to resume when any of them changed.
+    on_round_end: called as on_round_end(t, out_dir) after round t's checkpoint is written
+        (the job runner uploads the run folder and renews its lease here).
     """
     os.makedirs(out_dir, exist_ok=True)
-    cfg_dict = asdict(cfg)
+    cfg_dict = asdict(cfg) if extra_config is None else dict(engine=asdict(cfg), extra=extra_config)
     config_hash = hash_config(cfg_dict)
     rounds_path = os.path.join(out_dir, "rounds.jsonl")
     weighting = Weighting(cfg.weighting, [s.n_train for s in sites],
@@ -122,6 +126,8 @@ def run(cfg, sites, phi0, out_dir, manifest_hash=None, stop_after_round=None):
             f.write(json.dumps(rec) + "\n")
         state.save_checkpoint(out_dir, next_round=t + 1, phi=phi, m=m, sites=sites, accountant=acct,
                               config_hash=config_hash, manifest_hash=manifest_hash)
+        if on_round_end is not None:
+            on_round_end(t, out_dir)
         if stop_after_round is not None and t >= stop_after_round:
             break
     return phi, m

@@ -1,0 +1,11 @@
+# Gate G3 resume check on the real model (assumption A10): a short 3-site DiLoCo run, 4 rounds of H = 5.
+# g3_resume_straight runs uninterrupted; g3_resume_split stops after round 1 and is resumed by a new process
+# from the HF store. Same seeds and data, so any difference in phi_final is GPU non-determinism.
+method: g3_resume_split
+partition: skew_v1
+sites: [A, B, C]
+seed: 11
+model: {pixels: 200704, micro_batch: 4, grad_accum: 1, lr: 1.0e-4, warmup_steps: 50, quant: nf4, kbit_prepare: false}
+engine: {H: 5, total_steps_per_site: 20, eta_out: 0.7, mu: 0.9, weighting: fixed_q}
+lora: {a_file: shared/lora_A_r16_seed2026.safetensors, a_sha256: 9d927008b45ce51c3fc190f4dca23059290a9b2beaac43d16dccd9c2e0dbef56}
+eval: {dev_sites: []}

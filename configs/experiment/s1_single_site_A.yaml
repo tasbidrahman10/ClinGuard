@@ -1,0 +1,11 @@
+# Stage S1 / gate G3: one site trained alone for the full budget (1,000 optimizer steps, effective batch 4,
+# lr 1e-4 = middle of the grid). With one site, eta_out = 1 and mu = 0 the outer step returns the site's own
+# parameters, so this is plain local fine-tuning with a checkpoint every 100 steps. Must clearly beat zero-shot.
+method: s1_single_site_A
+partition: skew_v1
+sites: [A]
+seed: 11
+model: {pixels: 200704, micro_batch: 4, grad_accum: 1, lr: 1.0e-4, warmup_steps: 50, quant: nf4, kbit_prepare: false}
+engine: {H: 100, total_steps_per_site: 1000, eta_out: 1.0, mu: 0.0, weighting: uniform}
+lora: {a_file: shared/lora_A_r16_seed2026.safetensors, a_sha256: 9d927008b45ce51c3fc190f4dca23059290a9b2beaac43d16dccd9c2e0dbef56}
+eval: {dev_sites: [A, B, C], gen_batch: 8, max_new_tokens: 160}

@@ -177,7 +177,8 @@ The team's three Kaggle accounts run jobs at the same time, and all of them writ
   - `phi_final.safetensors`: written after the last round.
   - `LEASE.json`: who is training the run right now.
 - **Lease.** Before training, `run_job.py` writes `LEASE.json`: Kaggle account, session id, code commit, start time, and an expiry 13 hours later. It refuses to start while another account holds an unexpired lease. The lease is renewed at every checkpoint upload and deleted when the run finishes. An expired lease may be taken over, and the takeover is logged.
-- **Upload after every round.** After each round's checkpoint, the job uploads the run folder as one HF commit. A session killed mid-round loses at most that round.
+- **Upload policy (I24).** After a round, the job uploads the run folder in **one commit together with the lease renewal**, at most every 15 minutes, and always at the final round and at a deliberate stop. A killed session loses at most about 15 minutes of compute, and short rounds (H = 25) do not flood the shared repo with commits.
+- **Storage.** Each upload of `checkpoint.pt` (~85 MB) stays in the repo history. Once a run is finished only `phi_final`, `rounds.jsonl`, `run.json` and the generations are needed; old checkpoints are removed and the history squashed in a maintenance step taken when no lease is active.
 - **Same everything.** The notebook clones the commit pinned in `grid.yaml`, installs `requirements.lock`, and records the Kaggle image, GPU, CUDA and package versions in `run.json`. Resuming is refused when the config hash, manifest hash or code commit differs from the checkpoint (I9, extended with the commit).
 - **Access.**
   - Preferred: a free HF organization owns the private repo, and each member writes with their own token.
@@ -357,6 +358,8 @@ Two reporting subsets are also shown for every metric (G1 decision):
 
 ### 10.3 Development proxy for the primary endpoint (`eval/proxy.py`)
 The true primary endpoint needs readers, so tuning uses a pre-specified proxy: a generated report has a **proxy error** if its CheXbert labels disagree with the reference's on at least one finding labelled positive or negative in the reference (uncertain and blank handled by a fixed rule in `CODEBOOK.md`). **Worst-site proxy error rate** on development data is the selection criterion; tie-break: pooled RadGraph F1. Checkpoint rule: final round of the fixed schedule (no early-stopping search). State clearly in the report that this is a proxy.
+
+The exact rule (`proxy_v1`) and the CheXbert reading conventions are fixed in `docs/CODEBOOK.md`. Generated reports are scored in the separate evaluation environment (I21) by `scripts/evaluate.py`.
 
 **In CSE499A this proxy is the reported clinical endpoint (D16).** Every table and figure that uses it says "automatic proxy, not reader-assessed".
 

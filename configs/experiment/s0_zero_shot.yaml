@@ -1,0 +1,10 @@
+# Stage S0 / gate G3: the untrained model (LoRA B = 0) writes development reports for all three sites.
+# Zero-shot is a run with no training steps; it is the floor every fine-tuned model must beat.
+method: s0_zero_shot
+partition: skew_v1
+sites: [A, B, C]
+seed: 11
+model: {pixels: 200704, micro_batch: 4, grad_accum: 1, lr: 1.0e-4, warmup_steps: 50, quant: nf4, kbit_prepare: false}
+engine: {H: 1, total_steps_per_site: 0, eta_out: 1.0, mu: 0.0, weighting: fixed_q}
+lora: {a_file: shared/lora_A_r16_seed2026.safetensors, a_sha256: 9d927008b45ce51c3fc190f4dca23059290a9b2beaac43d16dccd9c2e0dbef56}
+eval: {dev_sites: [A, B, C], gen_batch: 8, max_new_tokens: 160}

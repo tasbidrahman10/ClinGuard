@@ -100,3 +100,14 @@ def test_generation_produces_text(tiny, iu_data):
     model = lora.apply_fixed_basis_lora(fresh())
     out = generate_findings(model, processor, _examples(iu_data, "C", "development", 2), max_new_tokens=6)
     assert len(out) == 2 and all(isinstance(t, str) for t in out)
+
+
+def test_processor_applies_the_pixel_budget(tiny):
+    """The 448 x 448 budget gives the grid measured on Kaggle in session 1 (28 x 34 patches for a
+    2496 x 2048 image); 336 x 336 gives 20 x 26."""
+    from PIL import Image
+    from clinguard.model import load
+    for side, grid in ((448, [1, 28, 34]), (336, [1, 20, 26])):
+        p = load.load_processor(load.TINY_MODEL_ID, load.TINY_MODEL_REVISION, image_pixels=side * side)
+        out = p.image_processor(images=[Image.new("RGB", (2496, 2048))], return_tensors="pt")
+        assert out["image_grid_thw"][0].tolist() == grid

@@ -16,7 +16,22 @@ IMAGE_PIXELS = 448 * 448
 
 
 def load_processor(model_id=MODEL_ID, revision=MODEL_REVISION, image_pixels=IMAGE_PIXELS):
-    return AutoProcessor.from_pretrained(model_id, revision=revision, min_pixels=image_pixels, max_pixels=image_pixels)
+    """Processor with a fixed pixel budget (min = max = image_pixels).
+
+    The budget is set on the image processor itself and then checked on a synthetic square image. In
+    transformers 5.23 a `size=` argument to from_pretrained is silently ignored for this processor (it
+    falls back to Qwen's default budget, about 25x more image tokens), and `min_pixels` / `max_pixels`
+    are deprecated, so neither is used. The check fails loudly if a library change stops the budget
+    from applying."""
+    from PIL import Image
+    processor = AutoProcessor.from_pretrained(model_id, revision=revision)
+    ip = processor.image_processor
+    ip.size = {"shortest_edge": image_pixels, "longest_edge": image_pixels}
+    grid = ip(images=[Image.new("RGB", (2048, 2048))], return_tensors="pt")["image_grid_thw"][0].tolist()
+    area = grid[1] * grid[2] * ip.patch_size ** 2
+    if not 0.7 * image_pixels <= area <= image_pixels:
+        raise RuntimeError(f"image budget not applied: {image_pixels} pixels requested, the processor uses {area}")
+    return processor
 
 
 def load_model(model_id=MODEL_ID, revision=MODEL_REVISION, quant="nf4", compute_dtype=torch.float16,

@@ -1,0 +1,21 @@
+# Evaluation environment (CPU): CheXbert labels, RadGraph F1, text metrics, the worst-site proxy and silver-probe
+# labelling. Separate from the training stack because f1chexbert 0.0.2 and radgraph 0.1.18 call tokenizer
+# methods that transformers 5 removed (they import under transformers 5 but fail when run; checked 2026-11-21).
+# Scorer weights: StanfordAIMI/RRG_scorers at revision 6646433b3ad83a10f6e141db76d0ece44312b236.
+#   uv venv --python 3.11 .venv-eval
+#   uv pip install --python .venv-eval/Scripts/python.exe -r requirements-eval.lock
+#   uv pip install --python .venv-eval/Scripts/python.exe --no-deps -e .
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0
+transformers==4.46.3
+tokenizers==0.20.3
+huggingface-hub==0.36.2
+f1chexbert==0.0.2
+radgraph==0.1.18
+requests==2.28.1
+numpy==2.4.6
+scikit-learn==1.9.1
+nltk==3.10.4
+pandas==3.1.1
+PyYAML==6.0.3
+pytest==9.2.0
