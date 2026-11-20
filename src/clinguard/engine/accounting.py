@@ -12,12 +12,13 @@ class Accountant:
     def __init__(self, site_names, n_params):
         self.sites = list(site_names)
         self.p = int(n_params)
-        self.total = {s: dict(upload_bytes=0, download_bytes=0, train_sec=0.0, examples=0) for s in self.sites}
+        self.total = {s: dict(upload_bytes=0, download_bytes=0, train_sec=0.0, calib_sec=0.0, examples=0)
+                      for s in self.sites}
         self._round = None
 
     def start_round(self):
-        self._round = {s: dict(upload_bytes=0, download_bytes=0, train_sec=0.0, examples=0, unique=0)
-                       for s in self.sites}
+        self._round = {s: dict(upload_bytes=0, download_bytes=0, train_sec=0.0, calib_sec=0.0, examples=0,
+                               unique=0) for s in self.sites}
 
     def broadcast(self, site):
         """Coordinator -> site: the shared trainable vector in fp32."""

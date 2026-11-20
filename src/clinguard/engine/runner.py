@@ -1,8 +1,9 @@
 """One simulated run: K sites trained one after another, one coordinator, T rounds.
 
     for each round t:
-        for each site i:  load phi_t -> train H optimizer steps -> d_i = phi_t - phi_i
-        w      = weighting(...)                       (uniform, fixed q, external; controller later)
+        for each site i:  load phi_t -> [calibration loss at phi_t, loss weighting only]
+                          -> train H optimizer steps -> d_i = phi_t - phi_i
+        w      = weighting(...)                       (uniform, fixed q, external, loss, random)
         d_bar  = sum_i w_i d_i
         m, phi = Nesterov outer step                  (engine/outer.py)
         log the round, write a checkpoint
@@ -32,8 +33,11 @@ class RunConfig:
     total_steps_per_site: int = 1000  # fixed data budget; rounds = total_steps_per_site / H
     eta_out: float = 0.7
     mu: float = 0.9
-    weighting: str = "fixed_q"        # uniform | fixed_q | external
+    weighting: str = "fixed_q"        # uniform | fixed_q | external | loss | random
     external_weights: tuple = ()
+    rho: float = 0.5                  # box (1 - rho) q <= w <= (1 + rho) q for loss / random (and ClinGuard)
+    loss_temperature: float = 1.0     # loss weighting: scores = calibration loss / T
+    random_sigma: float = 0.1         # random weighting: scores = sigma * N(0, 1); matched to ClinGuard in Phase 6
     reset_inner_state: bool = False   # True only for the FedAvg-with-reset variant
     seed: int = 11
     method: str = "fixed_q_diloco"    # label used in the run id and logs
@@ -64,7 +68,8 @@ def run(cfg, sites, phi0, out_dir, manifest_hash=None, stop_after_round=None):
     config_hash = hash_config(cfg_dict)
     rounds_path = os.path.join(out_dir, "rounds.jsonl")
     weighting = Weighting(cfg.weighting, [s.n_train for s in sites],
-                          external=list(cfg.external_weights) or None)
+                          external=list(cfg.external_weights) or None, rho=cfg.rho,
+                          temperature=cfg.loss_temperature, sigma=cfg.random_sigma, seed=cfg.seed)
     acct = Accountant([s.name for s in sites], phi0.numel())
 
     resumed = state.load_checkpoint(out_dir, sites=sites, accountant=acct,
@@ -87,25 +92,30 @@ def run(cfg, sites, phi0, out_dir, manifest_hash=None, stop_after_round=None):
 
     for t in range(start, cfg.rounds):
         acct.start_round()
-        deltas, losses = [], {}
+        deltas, losses, calib = [], {}, []
         for s in sites:
             s.set_params(phi)
             acct.broadcast(s.name)
+            if weighting.needs_calibration_loss:              # measured at phi_t, before local training
+                with acct.timed(s.name, "calib_sec"):
+                    calib.append(float(s.calibration_loss()))
             if cfg.reset_inner_state:
                 s.reset_inner_state()
             with acct.timed(s.name):
                 stats = s.train(cfg.H)
             acct.record_train(s.name, stats)
             deltas.append(outer.pseudo_gradient(phi, s.get_params()))
-            acct.upload_update(s.name)
+            acct.upload_update(s.name)                        # the calibration loss rides in the summary bytes
             losses[s.name] = stats["loss"]
 
-        w = weighting()
+        w = weighting(dict(round=t, calib_loss=calib or None))
         d_bar = outer.aggregate(deltas, w)
         phi, m = outer.nesterov_step(phi, m, d_bar, cfg.eta_out, cfg.mu)
 
         rec = dict(round=t, method=cfg.method, weights=dict(zip([s.name for s in sites], w)),
-                   train_loss=losses, delta_norm={s.name: d.norm().item() for s, d in zip(sites, deltas)},
+                   train_loss=losses,
+                   calib_loss=dict(zip([s.name for s in sites], calib)) if calib else None,
+                   delta_norm={s.name: d.norm().item() for s, d in zip(sites, deltas)},
                    d_bar_norm=d_bar.norm().item(), m_norm=m.norm().item(), phi_norm=phi.norm().item(),
                    cost=acct.end_round())
         with open(rounds_path, "a") as f:

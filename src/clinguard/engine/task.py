@@ -23,6 +23,11 @@ class SiteTask(Protocol):
         """Run `steps` optimizer steps on local training data. Returns at least
         {"loss": mean training loss, "examples": items drawn, "unique": distinct items drawn}."""
 
+    def calibration_loss(self) -> float:
+        """Mean loss on the site's calibration split at the current parameters (the runner calls it
+        right after set_params(phi_t), before training). Must not change the inner optimizer, the
+        sampler or any random state. Used by loss weighting; the real site also uses its probe here."""
+
     def reset_inner_state(self) -> None:
         """Forget the inner optimizer state (FedAvg-with-reset variant only)."""
 

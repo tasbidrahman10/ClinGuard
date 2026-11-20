@@ -11,5 +11,6 @@ abandoned runs stay listed.
 | 2026-11-20 | Laptop setup: `.venv` (CPython 3.11.18 via uv), `requirements-dev.lock`, `pytest -q` | Second development machine | 49 passed (torch 2.15.0+cpu, Windows 11) | Same versions as the 2026-11-11 desktop run |
 | 2026-11-20 | Full Kaggle archive downloaded to `data/raw/iu_xray/` | Images for the image-open check | 7,470 PNGs + 2 CSVs; CSV SHA-256 identical to the 2026-11-11 build | |
 | 2026-11-20 | `scripts/prepare_data.py --raw-dir data/raw/iu_xray --images-dir data/raw/iu_xray/images/images_normalized --check` | Image-open check (last eligibility rule) | All 3,199 chosen frontal images open; `skew_v1` and `iid_v1` reproduced exactly; 58 s | Manifests and data card not yet regenerated with `image_check: passed`; done at the G1 freeze |
+| 2026-11-20 | `pytest -q` after adding loss-weighted and random weighting (`engine/weighting.py`, `tests/test_weighting.py`) | Close gate G2 | 61 passed (49 existing unchanged + 12 new) | **G2 criteria met:** all engine tests pass on CPU; interrupted-and-resumed toy runs equal uninterrupted runs bit for bit (fixed-q, loss, random); uniform weighting reproduces the hand-computed three-round example; loss weighting reproduces a hand-computed first round |
 
 No model training run has been made yet.

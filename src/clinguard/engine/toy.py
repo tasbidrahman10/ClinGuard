@@ -13,19 +13,26 @@ def make_regression_sites(k=3, n=96, p=8, batch_size=8, lr=0.05, seed=0, spread=
     """k sites whose true coefficient vectors differ by `spread`, so their objectives conflict."""
     g = torch.Generator().manual_seed(seed)
     base = torch.randn(p, generator=g, dtype=dtype)
-    sites = []
+    sites, coefs = [], []
     for i in range(k):
         n_i = n + 16 * i                                   # unequal sizes, so q != uniform
         a_i = base + spread * torch.randn(p, generator=g, dtype=dtype)
         x = torch.randn(n_i, p, generator=g, dtype=dtype)
         y = x @ a_i + 0.1 * torch.randn(n_i, generator=g, dtype=dtype)
         sites.append(ToySite(f"site{i}", x, y, batch_size, lr, seed=1000 * seed + i))
+        coefs.append(a_i)
+    # Calibration splits come from a separate generator, so the training data above is unchanged.
+    g_cal = torch.Generator().manual_seed(10_000 + seed)
+    for s, a_i in zip(sites, coefs):
+        s.x_cal = torch.randn(32, p, generator=g_cal, dtype=dtype)
+        s.y_cal = s.x_cal @ a_i + 0.1 * torch.randn(32, generator=g_cal, dtype=dtype)
     return sites
 
 
 class ToySite:
-    def __init__(self, name, x, y, batch_size, lr, seed):
+    def __init__(self, name, x, y, batch_size, lr, seed, x_cal=None, y_cal=None):
         self.name, self.x, self.y, self.lr = name, x, y, lr
+        self.x_cal, self.y_cal = x_cal, y_cal
         self.n_train = len(x)
         self.phi = torch.nn.Parameter(torch.zeros(x.shape[1], dtype=x.dtype))
         self.sampler = EpochSampler(self.n_train, batch_size, seed)
@@ -43,6 +50,12 @@ class ToySite:
         with torch.no_grad():
             p = self.phi if phi is None else phi
             return 0.5 * ((self.x @ p - self.y) ** 2).mean().item()
+
+    def calibration_loss(self):
+        if self.x_cal is None:
+            raise RuntimeError(f"{self.name} has no calibration split")
+        with torch.no_grad():
+            return 0.5 * ((self.x_cal @ self.phi - self.y_cal) ** 2).mean().item()
 
     def train(self, steps):
         self.sampler.reset_seen()
@@ -68,13 +81,18 @@ class ToySite:
 
 
 class ScriptedSite:
-    """Round t ends at phi_t - script[t], whatever phi_t is."""
+    """Round t ends at phi_t - script[t], whatever phi_t is. Its calibration loss in round t is
+    calib_script[t] (0.0 when no script is given)."""
 
-    def __init__(self, name, script, n_train=1):
+    def __init__(self, name, script, n_train=1, calib_script=None):
         self.name, self.n_train = name, n_train
         self.script = [torch.as_tensor(d, dtype=torch.float64).reshape(-1) for d in script]
+        self.calib_script = list(calib_script) if calib_script is not None else None
         self.t = 0
         self.phi = None
+
+    def calibration_loss(self):
+        return 0.0 if self.calib_script is None else float(self.calib_script[self.t])
 
     def get_params(self):
         return self.phi.clone()

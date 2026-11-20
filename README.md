@@ -24,24 +24,30 @@ safety, diagnostic validity or privacy guarantees. "ClinGuard" is a working labe
 | `src/clinguard/engine/` | DiLoCo round loop, outer step, weighting, checkpoints, cost accounting |
 | `tests/` | Unit tests, including the manual's Appendix A tests |
 
-## Status (2026-11-11)
+## Status (2026-11-20)
 
 | Phase | State |
 |---|---|
-| 0 Setup | Repository, tests and decision log in place. Open: private GitHub and Hugging Face repos, metric packages checked on Kaggle. |
-| 1 Data | Pipeline built and run on the real CSV files; manifests are **candidates**. Open: image-open check on Kaggle, team review, model-side loader. |
-| 2 Engine | Round loop, Nesterov outer step, uniform and fixed-q weighting, checkpoint and resume, byte accounting. Tests A.1, A.2, A.3, A.7 pass on toy problems. Open: random and loss-weighted baselines. |
-| 3 to 8 | Not started. |
+| 0 Setup | Repository, tests and decision log in place. Open: private Hugging Face repo shared by the three Kaggle accounts, metric packages checked on Kaggle (G0). |
+| 1 Data | Pipeline built and run on the real files; image-open check passed (all 3,199 chosen images open). Manifests are **candidates** until the G1 review is signed off. |
+| 2 Engine | **G2 met.** Round loop, Nesterov outer step, uniform / fixed-q / external / loss / random weighting, checkpoint and resume, byte accounting. Tests A.1, A.2, A.3, A.7 pass on toy problems. |
+| 3 to 8 | Not started. Phase 3 (real model) is next. |
 
-No gate has been declared passed yet.
+Plan v1.1 (2026-11-20): no radiologist in CSE499A, so probes are automatically derived ("silver") and the
+CSE499A endpoint is an automatic proxy; see `docs/IMPLEMENTATION_PLAN.md`.
 
 ## Setup and tests
 
+Python 3.11 (matches CI). With [uv](https://docs.astral.sh/uv/):
+
 ```
-conda create -p .venv python=3.11 pip
-.venv/python -m pip install -r requirements-dev.lock
-.venv/python -m pytest -q
+uv venv --python 3.11 .venv
+uv pip install --python .venv/Scripts/python.exe -r requirements-dev.lock     # .venv/bin/python on Linux/macOS
+uv pip install --python .venv/Scripts/python.exe --no-deps -e .
+.venv/Scripts/python.exe -m pytest -q
 ```
+
+Or with conda: `conda create -p .venv python=3.11 pip`, then `pip install -r requirements-dev.lock`.
 
 The tests need no data and no GPU. They run from the repository root.
 
@@ -61,4 +67,5 @@ python scripts/prepare_data.py --raw-dir data/raw/iu_xray --check   # confirm co
 - The internal test split stays locked until the freeze. `load_split` refuses it without a freeze tag.
 - Tune only on development data. Never pick a seed or checkpoint after seeing results.
 - A fixed decision changes only through a dated entry in `docs/DEVIATIONS.md`.
-- Results made with unreviewed probes are "engineering only" and are never reported as findings.
+- Results made with silver probes are always labelled "automatically derived probes, not expert-verified".
+- The repository is public: never commit checkpoints, generated reports, cleaned text or probe sentences.

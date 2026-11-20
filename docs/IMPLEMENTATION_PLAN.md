@@ -332,7 +332,7 @@ All share model, data, trainable parameters, inner optimizer, H and tuning budge
 | **Fixed-q DiLoCo** | w = q, Nesterov outer step — **primary comparator** |
 | **ClinGuard** | Section 8 weights, same backbone — proposed method |
 | Probe-data SFT | Fixed-q DiLoCo, but each site also trains on its accepted silver y⁺ statements; extra compute matched and reported |
-| Alternative weights | (a) random weights with the same variance and box as ClinGuard's; (b) ordinary validation-loss weighting |
+| Alternative weights | (a) random weights with the same spread and box as ClinGuard's (I14); (b) loss weighting: q tilted towards sites with a higher calibration-split loss, same KL geometry and box as ClinGuard (I13) |
 
 **Tier 2 — required if compute allows (decide at G3 from measured time)**
 Pooled-data model (upper reference, simulation only); H ∈ {25, 250}; exact vs sketched scores and sketch sizes; probe-loss ablations (likelihood-only, contrast-only); with/without box constraint; IID vs skewed partition; trainable A+B LoRA; connector training.

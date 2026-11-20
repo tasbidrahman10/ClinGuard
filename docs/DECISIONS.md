@@ -73,10 +73,10 @@ D1 to D17 are fixed as written in `IMPLEMENTATION_PLAN.md` section 2.1 (v1.1). S
 | I10 | 2026-11-11 | Local development uses Python 3.11 with CPU PyTorch (`requirements-dev.lock`). `requirements.lock` for the GPU stack is written at G3 on the Kaggle image | The model stack cannot be pinned before it has run on Kaggle | G3 |
 | I11 | 2026-11-20 | Pillow added to `requirements-dev.lock` (13.0.0) | `prepare.py` needs it for the image-open check; the check now runs locally as well as on Kaggle | G1 |
 | I12 | 2026-11-20 | Shared compute protocol: whole runs per account, `LEASE.json` in each HF run folder, upload after every round, resume refused on a different code commit (extends I9) | Three accounts share one HF repo; prevents two accounts training the same run and silent mixing of code versions | G3 |
+| I13 | 2026-11-20 | **Loss-weighted baseline:** w = argmax Σ wᵢ ℓᵢ/T − KL(w‖q) on the simplex inside ClinGuard's box (1 − ρ)q ≤ w ≤ (1 + ρ)q. Exact solution wᵢ = clip(qᵢ exp(ℓᵢ/T − ν), box), ν by bisection. ℓᵢ = mean loss on site i's **calibration** split at φ_t, measured before local training. Higher loss → more weight. T tuned on development data | The plan says "validation-loss weighting" without a formula. Development data may only be used for tuning and selection (manual §5.2), so the in-loop loss uses the calibration split, the data ClinGuard also sees. Same KL geometry and box as ClinGuard, so the only difference is the clinical, direction-aware signal | G4 |
+| I14 | 2026-11-20 | **Random baseline:** same solution with scores σ·zᵢ, zᵢ ~ N(0, 1) from a generator seeded by (run seed, round); a fresh draw each round, no stored state. σ is set in Phase 6 to match the spread of ClinGuard's realised weights (default 0.1 until then) | "Random weights with matched variance" (plan section 9) needs a spread parameter; seeding by round keeps resume exact | G6 |
 
 ## 5. Not yet decided
 
-- **Loss-weighted baseline:** the plan names "ordinary validation-loss weighting" but gives no formula
-  (which loss, which direction, what temperature). To be fixed before Phase 4 tuning.
-- **Random-weight baseline:** must match the variance of ClinGuard's weights, which is unknown until
-  Phase 6.
+- **σ for the random baseline:** matched to ClinGuard's realised weight spread once Phase 6 runs exist
+  (I14). The statistic to match (standard deviation of w − q or of log(w/q)) is fixed before tuning.
