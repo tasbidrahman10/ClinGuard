@@ -15,6 +15,7 @@ def save_checkpoint(ckpt_dir, *, next_round, phi, m, sites, accountant, config_h
         sites={s.name: s.state_dict() for s in sites},
         accountant=accountant.state(),
         rng_torch=torch.get_rng_state(),
+        rng_cuda=torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
         config_hash=config_hash, manifest_hash=manifest_hash,
     )
     path = os.path.join(ckpt_dir, CKPT_NAME)
@@ -40,4 +41,7 @@ def load_checkpoint(ckpt_dir, *, sites, accountant, config_hash, manifest_hash):
         s.load_state_dict(ckpt["sites"][s.name])
     accountant.load(ckpt["accountant"])
     torch.set_rng_state(ckpt["rng_torch"])
+    if ckpt.get("rng_cuda") is not None and torch.cuda.is_available():
+        for device, rng in enumerate(ckpt["rng_cuda"][:torch.cuda.device_count()]):
+            torch.cuda.set_rng_state(rng, device)
     return ckpt["next_round"], ckpt["phi"], ckpt["m"]

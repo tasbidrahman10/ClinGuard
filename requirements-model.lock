@@ -1,0 +1,11 @@
+# Model stack for the tier (b) tests (tiny Qwen2.5-VL on CPU) and for Kaggle, on top of requirements-dev.lock.
+# Versions the 77-test suite passed with on 2026-11-20 (Python 3.11, CPU). On Kaggle keep the image's own
+# torch / torchvision and add bitsandbytes; the GPU lock (requirements.lock) is written at gate G3.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torchvision==0.29.2
+transformers==5.23.0
+tokenizers==0.23.3
+peft==0.22.0
+accelerate==1.16.0
+safetensors==0.8.0
+huggingface-hub==2.4.0

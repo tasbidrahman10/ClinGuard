@@ -161,7 +161,7 @@ Rule: `engine/` and `controller/` never import `transformers`. They operate on a
 - Checkpoints and logs go to **one private** Hugging Face repo, path `runs/<run_id>/`. `run_id = <method>_<partition>_H<H>_s<seed>_<cfg-hash8>`.
 - A run is resumable at round granularity: rerunning the same command continues from the last complete round and must reproduce an uninterrupted run (test A.7; on GPU see A10).
 - Kaggle provides two T4s: run two independent runs in parallel (one per GPU), never one run across both.
-- Three test tiers: (a) toy quadratic / tiny MLP on CPU (unit tests, CI on every commit); (b) a tiny VLM (for example `HuggingFaceTB/SmolVLM-256M-Instruct`) for pipeline smoke tests; (c) the real model.
+- Three test tiers: (a) toy quadratic / tiny MLP on CPU (unit tests, CI on every commit); (b) a tiny model with the **same Qwen2.5-VL architecture** (`trl-internal-testing/tiny-Qwen2_5_VLForConditionalGeneration`, I17) on real IU images, for pipeline tests on CPU; (c) the real model.
 - Local machines (Tasbid's desktop and laptop) have no usable GPU for the 3B model; they run tiers (a) and (b), the data pipeline, probe construction and analysis. Every tier (c) run happens on Kaggle.
 
 ### 4.1 Shared compute across three Kaggle accounts (D13)
@@ -188,7 +188,7 @@ The team's three Kaggle accounts run jobs at the same time, and all of them writ
   - On GPU, a resumed or handed-off run has the same state and configuration but is not guaranteed bit-identical (A10).
   - Every handoff is listed in `RUNLOG.md`.
   - Gate G3 measures the size of the difference with a two-account handoff test.
-- **Size (estimate).** φ ≈ 2.65 M numbers: rank-16 B matrices on q/k/v/o of Qwen2.5-VL-3B's 36 language-model layers. A checkpoint with φ, m and three sites' AdamW moments in fp32 is about 85 MB. Measure at G3.
+- **Size.** φ has exactly 2,654,208 numbers (I18): rank-16 B matrices on q/k/v/o of Qwen2.5-VL-3B's 36 language-model layers. A checkpoint with φ, m and three sites' AdamW moments in fp32 is about 85 MB.
 
 ---
 

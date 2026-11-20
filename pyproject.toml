@@ -12,7 +12,7 @@ dependencies = ["numpy", "pyyaml", "torch"]
 [project.optional-dependencies]
 dev = ["pytest"]
 # GPU / model stack. Exact versions are pinned in requirements.lock at gate G3, on the Kaggle image.
-model = ["transformers", "peft", "bitsandbytes", "accelerate", "safetensors"]
+model = ["transformers", "peft", "bitsandbytes", "accelerate", "safetensors", "torchvision", "pillow", "huggingface_hub"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

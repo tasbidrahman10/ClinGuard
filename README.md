@@ -31,7 +31,8 @@ safety, diagnostic validity or privacy guarantees. "ClinGuard" is a working labe
 | 0 Setup | Repository, tests and decision log in place. Open: private Hugging Face repo shared by the three Kaggle accounts, metric packages checked on Kaggle (G0). |
 | 1 Data | **G1 passed (2026-11-20).** Manifests frozen: `skew_v1` `fba077ca06499e73`, `iid_v1` `77e5cd83bdf165f8`; all 3,199 chosen images open. |
 | 2 Engine | **G2 met.** Round loop, Nesterov outer step, uniform / fixed-q / external / loss / random weighting, checkpoint and resume, byte accounting. Tests A.1, A.2, A.3, A.7 pass on toy problems. |
-| 3 to 8 | Not started. Phase 3 (real model) is next. |
+| 3 Model | **In progress.** Local half done: fixed-basis LoRA, examples and batches, the model-backed site, generation, test A.4; the full pipeline runs and resumes bit for bit on a tiny Qwen2.5-VL with real images. Next: Kaggle session 1 (`notebooks/kaggle_session1.ipynb`): access checks and profiling of the 3B model. |
+| 4 to 8 | Not started. |
 
 Plan v1.1 (2026-11-20): no radiologist in CSE499A, so probes are automatically derived ("silver") and the
 CSE499A endpoint is an automatic proxy; see `docs/IMPLEMENTATION_PLAN.md`.
@@ -48,6 +49,9 @@ uv pip install --python .venv/Scripts/python.exe --no-deps -e .
 ```
 
 Or with conda: `conda create -p .venv python=3.11 pip`, then `pip install -r requirements-dev.lock`.
+
+The model tests (tiny Qwen2.5-VL on CPU, real images) also need `requirements-model.lock`; without it,
+or without the IU X-ray files in `data/raw/iu_xray/`, those tests skip.
 
 The tests need no data and no GPU. They run from the repository root.
 
