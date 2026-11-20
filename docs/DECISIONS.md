@@ -6,7 +6,7 @@ entry in `DEVIATIONS.md`.
 
 ## 1. Fixed decisions (plan section 2.1)
 
-D1 to D14 are fixed as written in `IMPLEMENTATION_PLAN.md` section 2.1. Short form:
+D1 to D17 are fixed as written in `IMPLEMENTATION_PLAN.md` section 2.1 (v1.1). Short form:
 
 | ID | Decision |
 |---|---|
@@ -22,25 +22,40 @@ D1 to D14 are fixed as written in `IMPLEMENTATION_PLAN.md` section 2.1. Short fo
 | D10 | One site-wide probe group per site in the pilot |
 | D11 | Constraint bound relative to the current probe loss |
 | D12 | Seeds 11 (primary), 22, 33; split seed 20261110 |
-| D13 | Kaggle T4; checkpoints to a private Hugging Face repo |
+| D13 | Kaggle T4 on the team's three accounts, distributed by whole run; checkpoints in one private Hugging Face repo (plan section 4.1) |
 | D14 | One config-driven Python package; no federated framework |
+| D15 | CSE499A probes are silver probes: accepted only when MeSH and CheXbert-on-report agree; radiologist audit of a sample in CSE499B (added 2026-11-20) |
+| D16 | CSE499A clinical endpoint is the automatic worst-site proxy; reader pilot in CSE499B (added 2026-11-20) |
+| D17 | GitHub repository is public; no data-derived text or checkpoints in it (added 2026-11-20) |
 
 ## 2. Assumptions (plan section 2.2)
 
 | ID | Assumption | Status | Evidence |
 |---|---|---|---|
-| A1 | Kaggle copy has the two CSV files with the expected columns, about 3,850 studies / 7,470 images | **Verified 2026-11-11** for the CSV files | Columns match exactly; 3,851 studies, 7,466 images (3,818 frontal, 3,648 lateral). The image folder layout on Kaggle is still to be checked. |
+| A1 | Kaggle copy has the two CSV files with the expected columns, about 3,850 studies / 7,470 images | **Verified 2026-11-11 (CSV files) and 2026-11-20 (images)** | Columns match exactly; 3,851 studies, 7,466 images (3,818 frontal, 3,648 lateral). Full archive downloaded 2026-11-20: 7,470 PNG files in `images/images_normalized/`, the layout `prepare_data.py` documents for Kaggle. Both CSVs are byte-identical to the 2026-11-11 build (SHA-256 `cd725771...`, `7af9c8a6...`). |
 | A2 | IU X-ray licence is CC BY-NC-ND 4.0 | **Verified 2026-11-11** | Kaggle dataset metadata: "Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)", dataset version 2. Consequence unchanged: research use only; data, trained models and outputs stay private unless the supervisor approves. |
 | A3 | Qwen2.5-VL-3B-Instruct licence permits research use | **Verified 2026-11-11** | Model card licence `qwen-research` (Qwen Research License Agreement): non-commercial, research or evaluation only; redistribution must carry the licence and attribution notice. Current revision `66285546d2b821cf421d4f5eb2576359d3770cd3` (to be pinned at G3). The 7B model is Apache-2.0, revision `cc594898137f460bfe9f0759e9844b3ce807cfb5`. |
 | A4 | Base model was not trained on IU X-ray | Cannot be proven; limitation | Zero-shot baseline at G3 |
 | A5 | Stable 4-bit training with fp16 on a T4 | Open | G3 |
 | A6 | One run takes 4 to 6 T4-hours | Open (estimate) | G3 |
 | A7 | `radgraph` and `f1chexbert` install on Kaggle | Open | Needs a Kaggle session |
-| A8 | About 3,300 eligible studies | **Resolved 2026-11-11: 3,199** | 514 studies have no FINDINGS text and 138 more have no frontal image. May drop slightly if any image fails to open. |
+| A8 | About 3,300 eligible studies | **Resolved: 3,199** | 514 studies have no FINDINGS text and 138 more have no frontal image (2026-11-11). Image-open check run 2026-11-20: all 3,199 chosen frontal images open, so the count is final. |
+| A9 | Three team Kaggle accounts with GPU quota, each able to write to the shared HF repo | Open | G0 |
+| A10 | Same environment on all accounts; GPU resume close to but not bit-identical with an uninterrupted run | Open | G3 handoff test |
+| A11 | CheXbert labels of the calibration reports are reliable enough as the second silver-probe source | Open | G5 |
 
 ## 3. Questions for the supervisor (plan section 2.3)
 
-Q1 to Q7 are open. Work proceeds on the stated defaults until answered.
+| ID | Status |
+|---|---|
+| Q1 External test set | Open; default: none, stated as a limitation |
+| Q2 Radiologist time | **Answered 2026-11-20** (supervisor, reported by Tasbid): no radiologist in CSE499A. Use automatic labels and automatic metrics. A radiologist may audit a sample of probes and run the reader pilot in CSE499B. Leads to D15, D16, M6, M7 |
+| Q3 Baseline depth | Open; default: Tier 1 and 2 required, prior-art reproductions are stretch |
+| Q4 Method name | Open; default: working label |
+| Q5 Bound definition | Open; default: relative to current |
+| Q6 Ethics for reader study | Deferred to CSE499B with the reader pilot |
+| Q7 End of CSE499A | Open; default: G0–G4 required, G5–G6 if time allows |
+| Q8 Size of the CSE499B probe audit | Open (new); default: 20 accepted silver probes per site |
 
 ## 4. Implementation choices (made while building; open to review before the gate shown)
 
@@ -56,6 +71,8 @@ Q1 to Q7 are open. Work proceeds on the stated defaults until answered.
 | I8 | 2026-11-11 | Logical byte accounting per site and round: download = 4 bytes x P; upload = 4 bytes x P plus a 16-byte summary; sketches are added in Phase 6 | Plan section 10.6 | G2 |
 | I9 | 2026-11-11 | A checkpoint stores the config hash and manifest hash, and a run refuses to resume from a checkpoint written with different ones | Prevents silently mixing two configurations in one run | G2 |
 | I10 | 2026-11-11 | Local development uses Python 3.11 with CPU PyTorch (`requirements-dev.lock`). `requirements.lock` for the GPU stack is written at G3 on the Kaggle image | The model stack cannot be pinned before it has run on Kaggle | G3 |
+| I11 | 2026-11-20 | Pillow added to `requirements-dev.lock` (13.0.0) | `prepare.py` needs it for the image-open check; the check now runs locally as well as on Kaggle | G1 |
+| I12 | 2026-11-20 | Shared compute protocol: whole runs per account, `LEASE.json` in each HF run folder, upload after every round, resume refused on a different code commit (extends I9) | Three accounts share one HF repo; prevents two accounts training the same run and silent mixing of code versions | G3 |
 
 ## 5. Not yet decided
 

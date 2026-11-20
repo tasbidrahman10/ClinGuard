@@ -1,8 +1,15 @@
-# ClinGuard-DiLoCo — Implementation Plan (v1.0)
+# ClinGuard-DiLoCo — Implementation Plan (v1.1)
 
 Clinically constrained, low-communication training for multi-site chest X-ray report generation.
 Capstone CSE499A/B, North South University. Team: Tasbid Al Rahman, Tazvir Rahat, Puja Ghosh. Supervisor: Dr. Sumaiya Tabassum Nimi.
-Plan date: 2026-11-10. Source protocol: "ClinGuard-DiLoCo Methods Manual 01, v1.0" (the **manual**). Section numbers like "manual §6.4" refer to it.
+Plan date: 2026-11-10, **revised 2026-11-20 (v1.1)**. Source protocol: "ClinGuard-DiLoCo Methods Manual 01, v1.0" (the **manual**). Section numbers like "manual §6.4" refer to it.
+
+**What changed in v1.1 (2026-11-20).**
+1. **No radiologist in CSE499A** (supervisor). Probes are built automatically and accepted only when two independent label sources agree ("silver" probes, D15). The CSE499A clinical endpoint is the automatic worst-site proxy (D16). A radiologist audit of a probe sample and the blinded reader pilot move to CSE499B. Logged as deviations M6 and M7.
+2. **Compute is shared across the team's three Kaggle accounts**: whole runs are distributed between accounts, and all checkpoints go to one private Hugging Face repo (Section 4.1).
+3. **The GitHub repository is public** (D17). It never holds data-derived text or checkpoints.
+4. **Roles**: Tasbid leads all development; the other two members operate Kaggle runs (Section 13).
+5. **Semester split** made explicit (Section 1, Section 12). The internal test split stays locked through CSE499A.
 
 **This plan supersedes the earlier PoolTrain / BatchNorm direction** (old `CLAUDE.md`). Only the engineering lessons carry over: a tested Nesterov outer step, per-worker optimizer state, exact checkpoint/resume, pre-registered criteria, and honest reporting.
 
@@ -18,6 +25,7 @@ Plan date: 2026-11-10. Source protocol: "ClinGuard-DiLoCo Methods Manual 01, v1.
 6. Never tune on, build probes from, or select checkpoints with test data. Never pick the best seed after the fact.
 7. Numbers in this plan that are estimates (compute time, dataset counts, parameter counts) are labelled as estimates. Replace them with measured values as soon as they exist.
 8. Report negative results. The manual's stop rules (Section 15) are binding.
+9. The GitHub repository is **public** (D17). Never commit anything derived from the data: checkpoints, generated reports, cleaned report text, probe sentences, per-case outputs. Never put a token in code or in a notebook; tokens live only in Kaggle Secrets or local environment variables.
 
 ---
 
@@ -36,6 +44,11 @@ Plan date: 2026-11-10. Source protocol: "ClinGuard-DiLoCo Methods Manual 01, v1.
 **What we are building.** A single-machine **simulation** of K hospitals plus a coordinator (no real network in v1), with exact byte accounting, run on Kaggle T4 GPUs.
 
 **Scope v1 (manual §1).** Synchronous rounds, full participation, one shared architecture and checkpoint, English chest X-rays, one report section, one shared global model. Out of scope: asynchrony, personalization, real networking, heterogeneous architectures, formal privacy guarantees.
+
+**Semester split.**
+- **CSE499A (this semester):** everything that needs no radiologist. Data, engine, model integration, baselines and the RQ1 sweep (gates G0–G4, required). Then silver probes and ClinGuard on development data with automatic metrics (G5–G6, if time allows). All results are on **development data** and carry the labels "automatic metrics" and "automatically derived probes".
+- **CSE499B:** a radiologist audit of a sample of the silver probes (Section 7.3), any reruns the audit makes necessary, the analysis freeze, the **one** internal-test unlock, and the blinded reader pilot if readers are available (Section 10.4).
+- The test split stays locked until after the probe audit. If the audit changes the probes, the method changes, and a test set already opened would be spent.
 
 ---
 
@@ -57,8 +70,11 @@ Plan date: 2026-11-10. Source protocol: "ClinGuard-DiLoCo Methods Manual 01, v1.
 | D10 | **Probe groups in the pilot: one site-wide group per site** (J = K = 3 constraints) | Manual §9.2; IU is too small for per-finding groups | Per-finding groups (later, if counts allow) |
 | D11 | **Constraint bound** b_{j} = ℓ_j(φ_t) + δ, evaluated on the same probe batch (predicted probe loss may not rise more than δ above its current value) | A fixed early reference becomes permissive as the model improves (manual §6.4 warns of this) | Fixed reference checkpoint — kept as config option `bound_mode: fixed_ref` **[ASK PROF Q5]** |
 | D12 | **Seeds**: 11 (primary, pre-selected), 22, 33 (replications). Data split seed 20261110, never changed | Manual §9.1 | Choosing seeds after results |
-| D13 | **Compute: Kaggle T4, checkpoints to a private Hugging Face repo**, full state resume | Free; proven by the team on EFSM | Paid cloud |
+| D13 | **Compute: Kaggle T4 on the team's three Kaggle accounts, distributed by whole run (Section 4.1); checkpoints and logs in one private Hugging Face repo**, full state resume | Free; proven by the team on EFSM; three accounts triple the weekly GPU quota | Paid cloud; splitting one run's rounds across accounts (rounds are sequential, so no speed-up) |
 | D14 | **Code: one Python package, config-driven (YAML), pure PyTorch + transformers + peft + bitsandbytes**; no federated framework | Full control of optimizer states and the outer step; fewer hidden behaviours | Flower / FedML |
+| D15 | **Probes in CSE499A are silver probes.** They are built automatically from the calibration split and accepted only when the human-coded MeSH field and CheXbert labels of the radiologist-written report agree (Section 7.2). A radiologist audits a random sample in CSE499B (Section 7.3) | Supervisor, 2026-11-20: no radiologist this semester. Using two independent sources and requiring agreement filters most label noise | Waiting for a radiologist (blocks Phases 5–6); single-source labels |
+| D16 | **CSE499A clinical endpoint is automatic**: worst-site proxy error rate (Section 10.3) with CheXbert-label F1 and RadGraph F1. The blinded reader pilot (Section 10.4) moves to CSE499B | Supervisor, 2026-11-20 | Reader study this semester |
+| D17 | **The GitHub repository is public.** It holds code, configs, documentation and the uid-only manifests. Checkpoints, generated reports, cleaned text and probe sentences go to the private HF repo or stay local | Kaggle notebooks can clone without a token. Licence A2 forbids redistributing data-derived text | Private GitHub repo (plan v1.0) |
 
 ### 2.2 Assumptions to verify (each has a gate)
 
@@ -72,16 +88,20 @@ Plan date: 2026-11-10. Source protocol: "ClinGuard-DiLoCo Methods Manual 01, v1.
 | A6 | One full run (1,000 steps × 3 sites, effective batch 4, plus evaluation) takes roughly 4–6 T4-hours. **Estimate only**; the experiment grid in Section 11 is sized from the measured value | G3 |
 | A7 | `radgraph` and `f1chexbert` (or equivalents) install and run on Kaggle | G0 |
 | A8 | Eligible studies (non-empty findings + a frontal image) number roughly 3,300. **Estimate only** | G1 |
+| A9 | Each of the three team Kaggle accounts is phone-verified and has the weekly GPU quota (about 30 hours per account). Each account can clone the repo and write to the shared HF repo | G0 |
+| A10 | All accounts run the same environment (Kaggle image pinned, `requirements.lock`). A run resumed on a different machine continues correctly. On GPU it is **close to, but not bit-identical with**, an uninterrupted run, because fp16 kernels are not deterministic. Measure the gap with a handoff test | G3 |
+| A11 | CheXbert (`f1chexbert` or equivalent) labels the ~330 calibration reports reliably enough to serve as the second label source for silver probes. Check against MeSH agreement rates | G5 |
 
 ### 2.3 Questions for the supervisor (defaults in bold so work is not blocked)
 
 - Q1. External test set: IU X-ray is now the training source, so the manual's external set is gone. **Default: no external site; stated as a limitation.** Alternative: a second public dataset later.
-- Q2. Radiologist time: Section 7 needs about 150 probe cases reviewed (50 per site) by about week 5, and the reader pilot needs about 150 patients × 2 reports × 2 readers near the end. **Default: plan on these numbers.**
+- Q2. Radiologist time. **Answered 2026-11-20: no radiologist in CSE499A.** Use automatic labels and automatic metrics. In CSE499B a radiologist may audit a sample of probes and run the reader pilot (D15, D16; deviations M6, M7).
 - Q3. Baseline depth: reproducing FedMRG / FedIHRAS / MERIT / IsoLoCo is heavy. **Default: Tier 1 and Tier 2 baselines (Section 9) are required; prior-art reproductions are Tier 3 / stretch.**
 - Q4. Final method name ("ClinGuard" collides with an existing paper, manual §3). **Default: keep as working label.**
 - Q5. Constraint bound definition (D11). **Default: relative-to-current.**
-- Q6. Ethics / IRB for the reader study with public de-identified data. **Default: supervisor confirms what is needed before Phase 7.**
-- Q7. Which semester boundary applies (what must exist at the end of CSE499A). **Default: gates G0–G4 by end of 499A.**
+- Q6. Ethics / IRB for the reader study with public de-identified data. **Deferred to CSE499B**, together with the reader pilot.
+- Q7. Which semester boundary applies (what must exist at the end of CSE499A). **Default: gates G0–G4 required; G5–G6 on silver probes if time allows; test unlock and reader pilot in CSE499B.**
+- Q8. Size of the CSE499B radiologist probe audit. **Default: a stratified random sample of 20 accepted silver probes per site (60 in total).**
 
 ---
 
@@ -113,7 +133,7 @@ Baselines are the same loop with a different `weighting` (uniform, fixed-q, rand
 ```
 clinguard/
   README.md  pyproject.toml  requirements.lock
-  configs/            base.yaml  model/  data/  method/  experiment/
+  configs/            base.yaml  model/  data/  method/  experiment/ (incl. grid.yaml, the job list)
   docs/               DECISIONS.md  DEVIATIONS.md  RUNLOG.md  DATA_CARD.md  CODEBOOK.md
   src/clinguard/
     data/             ingest.py  clean.py  labels.py  partition.py  manifest.py  dataset.py  collate.py
@@ -123,7 +143,8 @@ clinguard/
     controller/       sketch.py  scores.py  solver.py
     eval/             metrics.py  proxy.py  reader_package.py  stats.py
     utils/            seed.py  hashing.py  logging.py  hf_sync.py
-  scripts/            prepare_data.py  profile_model.py  run.py  evaluate.py  make_review_pack.py  make_reader_pack.py
+  scripts/            prepare_data.py  profile_model.py  run.py  run_job.py  evaluate.py
+                      make_silver_probes.py  make_review_pack.py  make_reader_pack.py
   tests/              test_sign.py  test_momentum.py  test_reduction.py  test_lora_identity.py
                       test_sketch.py  test_constraint.py  test_resume.py  test_manifest.py  test_toy_e2e.py
   notebooks/          kaggle_runner.ipynb
@@ -136,11 +157,38 @@ Rule: `engine/` and `controller/` never import `transformers`. They operate on a
 ## 4. Environment and workflow
 
 - Python 3.11; pin exact versions of torch, transformers, peft, bitsandbytes, accelerate in `requirements.lock`. Record the Kaggle image, GPU model and CUDA version in every run log.
-- Code lives in a **private GitHub repo**. The Kaggle notebook clones a specific commit hash; the hash is written into the run log. No code edits inside Kaggle.
-- Checkpoints and logs go to a **private** Hugging Face repo, path `runs/<run_id>/`. `run_id = <method>_<partition>_H<H>_s<seed>_<cfg-hash8>`.
-- A run is resumable at round granularity: rerunning the same command continues from the last complete round and must reproduce an uninterrupted run (test A.7).
+- Code lives in the **public** GitHub repo `tasbidrahman10/ClinGuard` (D17). The Kaggle notebook clones a specific commit hash; the hash is written into the run log. No code edits inside Kaggle. Kaggle notebooks themselves stay **private** on Kaggle, since their outputs can contain generated reports.
+- Checkpoints and logs go to **one private** Hugging Face repo, path `runs/<run_id>/`. `run_id = <method>_<partition>_H<H>_s<seed>_<cfg-hash8>`.
+- A run is resumable at round granularity: rerunning the same command continues from the last complete round and must reproduce an uninterrupted run (test A.7; on GPU see A10).
 - Kaggle provides two T4s: run two independent runs in parallel (one per GPU), never one run across both.
 - Three test tiers: (a) toy quadratic / tiny MLP on CPU (unit tests, CI on every commit); (b) a tiny VLM (for example `HuggingFaceTB/SmolVLM-256M-Instruct`) for pipeline smoke tests; (c) the real model.
+- Local machines (Tasbid's desktop and laptop) have no usable GPU for the 3B model; they run tiers (a) and (b), the data pipeline, probe construction and analysis. Every tier (c) run happens on Kaggle.
+
+### 4.1 Shared compute across three Kaggle accounts (D13)
+
+The team's three Kaggle accounts run jobs at the same time, and all of them write to the one private HF repo.
+
+- **Parallel by run, not by round.** Round t+1 starts from the outer step of round t, so the rounds of one run are strictly sequential. Three accounts cannot train different rounds of the same run at once. The speed-up comes from running *different* runs at once (methods, seeds, H values, partitions). That is up to 3 accounts × 2 T4s = 6 runs in parallel. One run never uses two GPUs.
+- **Handoff.** A run can still move between accounts when a session hits the 12-hour limit or an account's weekly quota runs out. The next operator resumes from the last complete round stored in the HF repo. A handoff keeps a run going; it does not make it faster.
+- **Job list.** `configs/experiment/grid.yaml` (in GitHub) lists every planned run: run_id, config file, pinned code commit and assigned account. Tasbid edits it. Operators only start runs listed for their account.
+- **HF layout.** `runs/<run_id>/` holds:
+  - `checkpoint.pt`: latest complete round only; earlier rounds stay in the HF commit history.
+  - `run.json` and `rounds.jsonl`.
+  - `phi_final.safetensors`: written after the last round.
+  - `LEASE.json`: who is training the run right now.
+- **Lease.** Before training, `run_job.py` writes `LEASE.json`: Kaggle account, session id, code commit, start time, and an expiry 13 hours later. It refuses to start while another account holds an unexpired lease. The lease is renewed at every checkpoint upload and deleted when the run finishes. An expired lease may be taken over, and the takeover is logged.
+- **Upload after every round.** After each round's checkpoint, the job uploads the run folder as one HF commit. A session killed mid-round loses at most that round.
+- **Same everything.** The notebook clones the commit pinned in `grid.yaml`, installs `requirements.lock`, and records the Kaggle image, GPU, CUDA and package versions in `run.json`. Resuming is refused when the config hash, manifest hash or code commit differs from the checkpoint (I9, extended with the commit).
+- **Access.**
+  - Preferred: a free HF organization owns the private repo, and each member writes with their own token.
+  - Fallback: one fine-grained token with write access to that single repo only.
+  - Either way, tokens live only in Kaggle Secrets (`HF_TOKEN`) and can be revoked per member.
+- **Determinism.**
+  - On CPU, a resumed run is bit-identical to an uninterrupted one (A.7).
+  - On GPU, a resumed or handed-off run has the same state and configuration but is not guaranteed bit-identical (A10).
+  - Every handoff is listed in `RUNLOG.md`.
+  - Gate G3 measures the size of the difference with a two-account handoff test.
+- **Size (estimate).** φ ≈ 2.65 M numbers: rank-16 B matrices on q/k/v/o of Qwen2.5-VL-3B's 36 language-model layers. A checkpoint with φ, m and three sites' AdamW moments in fp32 is about 85 MB. Measure at G3.
 
 ---
 
@@ -216,26 +264,38 @@ AdamW (β = 0.9, 0.999; weight decay 0), gradient clipping 1.0, effective batch 
 ## 7. Clinical probes (calibration set)
 
 ### 7.1 What a probe is
-A reviewed triple (image x, correct statement y⁺, clinically contradictory statement y⁻), under the same prompt context c as generation. Example: y⁺ "There is a small left pleural effusion." / y⁻ "There is no pleural effusion."
+A triple (image x, correct statement y⁺, clinically contradictory statement y⁻), under the same prompt context c as generation. Example: y⁺ "There is a small left pleural effusion." / y⁻ "There is no pleural effusion."
 
-### 7.2 Candidate generation (`probe/candidates.py`, calibration split only)
-1. For each calibration study, take sentences from the findings (excluding `needs_prior` sentences) and the study's MeSH/Problems terms.
-2. Build candidate pairs with a small, versioned template table for about 10 findings (effusion, cardiomegaly, pneumothorax, focal consolidation/opacity, edema, atelectasis, nodule, normal heart size, clear lungs, and so on): positive statement ↔ its negation, and for sided findings, a wrong-side contrast.
-3. Sample to cover sites, normal/abnormal and finding types; record denominators.
-Automatically produced pairs are **candidates, not truth** (manual §8). Never treat "not mentioned" as "absent".
+### 7.2 Silver probe construction (`probe/candidates.py`, `scripts/make_silver_probes.py`; calibration split only; D15)
+No radiologist reviews probes in CSE499A. Probes are built automatically. A probe is accepted only when **two independent label sources agree**:
+- **Source 1:** the human-coded MeSH field. It was assigned by the dataset's annotators, not by our code or the report parser.
+- **Source 2:** CheXbert labels (positive / negative / uncertain / blank) extracted from the **radiologist-written** FINDINGS text. The labeler version is pinned (A7, A11).
 
-### 7.3 Radiologist review (`make_review_pack.py`, `review_io.py`)
-- Export a self-contained HTML/CSV pack per reviewer: image, context, y⁺, y⁻, and fields: `y_plus_supported` (yes/no/insufficient), `y_minus_contradictory` (yes/no/insufficient), `notes`. No model outputs are shown.
-- Import the completed sheet; keep only pairs with yes/yes; log exclusions and disagreement. Freeze as `probes_v1.jsonl` with a checksum.
-- Eligibility gate per site: **at least 50 reviewed, accepted cases**; otherwise the site's group is "unsupported" and is omitted from the controller (not given zero loss).
-- Target: about 60–70 candidates per site sent for review, to end with ≥ 50 accepted.
-- **Until review is complete**, engineering uses `probes_silver_v0` (unreviewed candidates). Any result produced with silver probes is labelled "engineering only" and never reported as a finding.
+Steps:
+1. **Template table** (`probe_templates_v1.yaml`, versioned): about 10 findings (pleural effusion, cardiomegaly, pneumothorax, focal opacity/consolidation, edema, atelectasis, nodule, normal heart size, clear lungs, and so on). Each finding has a matched pair of statements: a positive form and its negation. Sided findings also get left/right forms.
+2. **Positive pair (finding present).** Accept only if MeSH codes the finding **and** CheXbert labels it positive. y⁺ is the template positive and y⁻ is the template negation. If MeSH gives a side (for example "Pleural Effusion/left") and the report text names the same side, also build a wrong-side pair.
+3. **Negative pair (finding absent).** Accept only if CheXbert labels the finding **negative** (the radiologist explicitly ruled it out) **and** MeSH does not code it. y⁺ is the template negation and y⁻ is the template positive. **"Not mentioned" never counts as absent.**
+4. **Exclude**, with a logged reason:
+   - studies flagged `needs_prior`;
+   - findings whose source sentence was changed by `clean_v1` (deleting `XXXX` can strengthen a statement);
+   - any finding where the sources disagree or CheXbert says uncertain.
+5. **Same wording style on both sides.** y⁺ and y⁻ come from the same template family and differ only in the clinical claim. The probe therefore cannot be won by preferring radiologist phrasing over template phrasing. A paraphrase set, with the report's own sentence as y⁺, is a secondary check (Section 7.4).
+6. **Sampling.** Cover sites, normal/abnormal studies and finding types; record denominators. Cap each study at 3 pairs so no single study dominates.
+7. **Freeze** as `probes_silver_v1.jsonl`, with a checksum and an exclusion table. It is stored locally and in the private HF repo, **never in GitHub** (D17).
+8. **Labelling of results.** Results built on these probes are reported as findings of CSE499A. Each one carries the label "**automatically derived probes, not expert-verified**". Never describe them as reviewed or as clinical ground truth (manual §6.2).
+9. **Eligibility gate per site:** **at least 50 accepted silver probe pairs**. Otherwise the site's group is "unsupported" and omitted from the controller; it is not given zero loss.
+
+### 7.3 Radiologist audit (CSE499B; `make_review_pack.py`, `review_io.py`)
+- If a radiologist is available, export a stratified random sample of accepted silver probes (Q8: default 20 per site). Each pack is self-contained: image, context, y⁺ and y⁻. Its fields are `y_plus_supported` (yes/no/insufficient), `y_minus_contradictory` (yes/no/insufficient) and `notes`. No model outputs are shown.
+- Import the completed sheet. Report the agreement rate per site and per finding with exact denominators, and log disagreements.
+- **The audit comes before the freeze and the test unlock.** If agreement is poor, build `probes_v2` from reviewed or corrected cases only, rerun the affected Phase 6 runs on development data, and then freeze.
+- If no radiologist is available in CSE499B either, the final report says the probes were never expert-verified.
 
 ### 7.4 Probe loss and gradient (`probe/loss.py`, `gradient.py`; manual Eq. 3–4)
 - s_φ(y | x, c) = mean token log-probability of y, teacher-forced.
 - ℓ_g(φ) = mean over cases of [ −a·s(y⁺) + b·softplus((s(y⁻) − s(y⁺)) / τ) ], with a = b = 1, τ = 1 as starting values.
 - Each round, each site draws a **probe batch of 24 accepted cases** (round-specific seed, stratified), computes ℓ_j(φ_t) and g_j = ∇_φ ℓ_j(φ_t) in eval mode, before local training. Probe compute (forward/backward counts and seconds) is logged separately for RQ4.
-- Controls required before trusting the probe (manual §8.6): text-only (blank image) and image-swapped versions must **not** achieve the same probe loss; paraphrase check on a subset.
+- Controls required before trusting the probe (manual §8.6): text-only (blank image) and image-swapped versions must **not** achieve the same probe loss; paraphrase check on a subset. With no radiologist in CSE499A, these controls are the main evidence that the silver probes measure something image-grounded, so they are part of gate G5.
 
 ---
 
@@ -271,7 +331,7 @@ All share model, data, trainable parameters, inner optimizer, H and tuning budge
 | Uniform DiLoCo | w_i = 1/K, Nesterov outer step |
 | **Fixed-q DiLoCo** | w = q, Nesterov outer step — **primary comparator** |
 | **ClinGuard** | Section 8 weights, same backbone — proposed method |
-| Probe-data SFT | Fixed-q DiLoCo, but each site also trains on its reviewed y⁺ statements; extra compute matched and reported |
+| Probe-data SFT | Fixed-q DiLoCo, but each site also trains on its accepted silver y⁺ statements; extra compute matched and reported |
 | Alternative weights | (a) random weights with the same variance and box as ClinGuard's; (b) ordinary validation-loss weighting |
 
 **Tier 2 — required if compute allows (decide at G3 from measured time)**
@@ -293,7 +353,10 @@ Per site and pooled: RadGraph F1, CheXbert-label F1, BLEU-4, ROUGE-L, BERTScore;
 ### 10.3 Development proxy for the primary endpoint (`eval/proxy.py`)
 The true primary endpoint needs readers, so tuning uses a pre-specified proxy: a generated report has a **proxy error** if its CheXbert labels disagree with the reference's on at least one finding labelled positive or negative in the reference (uncertain and blank handled by a fixed rule in `CODEBOOK.md`). **Worst-site proxy error rate** on development data is the selection criterion; tie-break: pooled RadGraph F1. Checkpoint rule: final round of the fixed schedule (no early-stopping search). State clearly in the report that this is a proxy.
 
-### 10.4 Primary endpoint and reader pilot (manual §10.2–10.3)
+**In CSE499A this proxy is the reported clinical endpoint (D16).** Every table and figure that uses it says "automatic proxy, not reader-assessed".
+
+### 10.4 Primary endpoint and reader pilot (CSE499B; manual §10.2–10.3)
+Runs in CSE499B, after the probe audit and the freeze, and only if qualified readers are available. If they are not, the final report states that the manual's primary endpoint was not assessed and that results rest on the automatic proxy.
 - E = 1 if independent adjudication finds at least one clinically significant error in a generated report. Site rate p_s; **W = max_s p_s**; effect D = W(ClinGuard) − W(fixed-q DiLoCo), lower is better; conditioned on seed 11.
 - `make_reader_pack.py`: simple random sample of **50 test studies per site** (150 total); for each, the image, the task context, and the two methods' reports in randomised A/B order; blinded key stored separately; codebook fields: false finding, omitted finding, wrong laterality/location, wrong severity, wrong negation/uncertainty, unsupported comparison, other; clinically significant yes/no; insufficient evidence.
 - Two readers, independent; adjudication process fixed in advance; report agreement.
@@ -321,7 +384,7 @@ Primary configuration: `skew_v1`, K = 3, H = 100, T = 10, effective batch 4, see
 | S5 Final Tier 1 | 8 methods × 3 seeds = 24 | Main table |
 | S6 Tier 2 ablations | about 10–15, seed 11 | Ablation table |
 
-With the **estimate** of 4–6 T4-hours per run, the total is roughly 250–400 T4-hours; three Kaggle accounts with two T4s each give up to about 180 T4-hours per week. **At G3, replace the estimate with measured time and cut Tier 2 first if the total exceeds the available weeks.** Equal tuning budget per method is mandatory (manual §9.1).
+With the **estimate** of 4–6 T4-hours per run, the total is roughly 250–400 T4-hours. The team's three Kaggle accounts, with two T4s each, give up to about 180 T4-hours per week. Runs are distributed across the accounts through `grid.yaml` (Section 4.1), and a week's work is planned so that each account's quota is used without two accounts needing the same run. **At G3, replace the estimate with measured time and cut Tier 2 first if the total exceeds the available weeks.** Equal tuning budget per method is mandatory (manual §9.1).
 
 ---
 
@@ -329,37 +392,63 @@ With the **estimate** of 4–6 T4-hours per run, the total is roughly 250–400 
 
 Week numbers are relative (week 1 = the week of 2026-11-09) and illustrative.
 
+**Semester targets (Q7 default).** CSE499A: G0–G4 required; G5–G6 on silver probes if time allows. CSE499B: probe audit, Phase 7, Phase 8.
+
 ### Phase 0 — Setup (week 1)
-Tasks: create private GitHub + HF repos; skeleton package, CI running `pytest`; `requirements.lock`; `DECISIONS.md` seeded with Section 2; verify A2, A3, A7; send Section 2.3 questions to the supervisor; assign roles (Section 13).
-**Gate G0:** repo builds and tests run on a clean machine; licences recorded; metric packages import on Kaggle.
+Tasks:
+- Skeleton package and CI running `pytest`; `requirements.lock`; `DECISIONS.md` seeded with Section 2.
+- Verify A2, A3 and A7; send the Section 2.3 questions to the supervisor; assign roles (Section 13).
+- Create the HF organization (or the fine-grained-token fallback) and the private run repo. Give the other two Kaggle accounts write access, and store the tokens in Kaggle Secrets.
+- Verify A9: each account can start a T4 session, clone the public repo, import the package, and write and delete a test file in the HF repo.
+
+**Gate G0:** repo builds and tests run on a clean machine; licences recorded; metric packages import on Kaggle; all three accounts pass the A9 check.
 
 ### Phase 1 — Data (weeks 1–2)
 Tasks: `ingest`, `clean_v1`, group lists, both partitions, splits, manifests, `DATA_CARD.md` (counts per site × role × group, exclusions with reasons, limitations), loader with deterministic sampler, `test_manifest.py`.
-**Gate G1:** manifests hashed and frozen; no cross-split or cross-site overlap; counts table reviewed by the team; A1 and A8 resolved. After G1 the split seed and group lists never change.
+**Gate G1:** manifests hashed and frozen; no cross-split or cross-site overlap; counts table and G1 review items signed off by Tasbid; A1 and A8 resolved. After G1 the split seed and group lists never change.
 
 ### Phase 2 — Engine on toy problems (weeks 2–3)
 Tasks: `SiteTask` interface; `outer.py` (D7); `weighting.py` (uniform, fixed-q, random, loss-weighted, external weights); `state.py` (atomic checkpoint: φ, m, per-site AdamW and sampler state, RNG, round id, config and manifest hashes, counters); `accounting.py`; `runner.py`; tests A.1, A.2, A.3, A.7 and `test_toy_e2e.py` (toy sites with conflicting quadratic objectives).
 **Gate G2:** all engine tests pass on CPU; an interrupted-and-resumed toy run equals an uninterrupted run bit-for-bit; uniform weighting reproduces a hand-computed three-round example.
 
 ### Phase 3 — Real model integration (weeks 3–4)
-Tasks: `load.py`, `lora.py`, `params.py`; test A.4 (LoRA identity, and a demonstration that averaging trainable A and B differs); `generate.py`; `profile_model.py` (memory and time at two resolutions and microbatch sizes); zero-shot evaluation on development data; one single-site fine-tune; resume test with the real model (short run); freeze prompt, resolution, decoding.
-**Gate G3:** fine-tuned single-site model clearly beats zero-shot on development metrics; no NaNs in fp16 (or fallback chosen and logged); measured time per run recorded; compute budget table in Section 11 updated; Tier 2 scope decided. **Stop and fix if base report generation is broken** (manual §13).
+Tasks:
+- Model code: `load.py`, `lora.py`, `params.py`; test A.4 (LoRA identity, and a demonstration that averaging trainable A and B differs); `generate.py`.
+- Profiling: `profile_model.py` (memory and time at two resolutions and microbatch sizes).
+- First model results: zero-shot evaluation on development data; one single-site fine-tune; freeze prompt, resolution and decoding.
+- Shared-compute tooling (Section 4.1): `utils/hf_sync.py` and `scripts/run_job.py`. They handle lease, per-round upload, resume from HF and the commit check. The checkpoint also stores CUDA RNG state. `notebooks/kaggle_runner.ipynb` is the one runbook notebook operators use. A first `grid.yaml` is written.
+- Resume and handoff tests with the real model (short runs): resume on the same account; then two rounds on account 1, continued on account 2. Compare against an uninterrupted run and record the gap (A10).
+
+**Gate G3:** fine-tuned single-site model clearly beats zero-shot on development metrics; no NaNs in fp16 (or fallback chosen and logged); measured time per run recorded; compute budget table in Section 11 updated; Tier 2 scope decided; cross-account handoff works and its numerical gap is recorded. **Stop and fix if base report generation is broken** (manual §13).
 
 ### Phase 4 — Baseline pilots and RQ1 (weeks 4–6)
 Tasks: local-only, FedAvg, uniform and fixed-q DiLoCo on seed 11; tuning on development data; RQ1 sweep over H on both partitions; per-site proxy error, per-site metrics and cost tables.
 **Gate G4:** DiLoCo matches or beats FedAvg at equal data (otherwise sync is suspect — stop and debug); RQ1 result written up **whatever it shows**. If no site-specific trade-off appears under `skew_v1` at any H, raise it with the supervisor before investing in Phase 6 (manual: "do not manufacture one by untuning baselines").
 
-### Phase 5 — Calibration set (weeks 2–5, in parallel)
-Tasks: candidate templates and generation; review pack; send to the radiologist (via supervisor); import, freeze `probes_v1`; probe loss and gradient with unit tests on the tiny VLM; text-only and image-swap controls.
-**Gate G5:** each site has ≥ 50 accepted cases (or is marked unsupported); controls show the probe depends on the image; ambiguous and excluded cases logged.
+### Phase 5 — Silver calibration set (weeks 3–5, in parallel with Phases 3–4)
+Tasks:
+- Write the template table `probe_templates_v1.yaml`.
+- Run CheXbert labelling of the calibration reports; this needs no 3B model, so it can run locally or in a short Kaggle session. Check A11.
+- Apply the two-source agreement filter (Section 7.2); freeze `probes_silver_v1`.
+- Probe loss and gradient, with unit tests on the tiny VLM.
+- Text-only, image-swap and paraphrase controls with the real model.
+- Prepare `make_review_pack.py` for the CSE499B audit. It is not run in CSE499A.
+
+**Gate G5:** each site has ≥ 50 accepted silver pairs (or is marked unsupported); controls show the probe depends on the image; MeSH–CheXbert agreement rates and all excluded cases logged.
 
 ### Phase 6 — ClinGuard (weeks 6–9)
 Tasks: `sketch.py` + test A.5; `scores.py`; `solver.py` + test A.6 (feasible, conflicting, zero-signal, missing-group cases); reduction test (w = q and zero penalty reproduces fixed-q DiLoCo exactly, A.3); RQ2 fidelity study (exact vs sketched scores; predicted vs realised probe-loss change after the actual step); ClinGuard tuning; matched controls (probe-data SFT, random weights, loss weighting); Tier 2 ablations.
 **Gate G6:** predicted and realised probe-loss changes agree in sign well above chance on development rounds; controller is not living on slack or pinned at the box every round; RQ2 written up. Apply stop rules (Section 15).
 
-### Phase 7 — Freeze and test (weeks 9–11)
-Tasks: tag the freeze commit (configs, prompts, statistics plan, reader protocol); run seeds 11/22/33 for Tier 1 if not already final; unlock the internal test split **once**; automatic metrics; build and send the reader pack; import ratings; statistics.
-**Gate G7:** frozen analysis executed exactly as pre-registered; all deviations listed.
+### Phase 7 — Probe audit, freeze and test (CSE499B)
+Tasks:
+1. Radiologist audit of the silver probes (Section 7.3). If needed, build `probes_v2` and rerun the affected runs on development data.
+2. Tag the freeze commit (configs, prompts, statistics plan, reader protocol).
+3. Run seeds 11/22/33 for Tier 1 if not already final.
+4. Unlock the internal test split **once**; compute automatic metrics.
+5. If readers are available: build and send the reader pack, import the ratings, and run the statistics.
+
+**Gate G7:** frozen analysis executed exactly as pre-registered; audit result reported; all deviations listed.
 
 ### Phase 8 — Report and showcase (weeks 11+)
 Report using the manual's Appendix B template (study ID, design, comparators, results, cost, limitations, decision). Demo for the Innovation Competition: a dashboard replaying a run — per-round weights, probe losses, per-site error proxy — and side-by-side reports on held-out images, labelled as retrospective research output, not a clinical tool.
@@ -370,10 +459,10 @@ Report using the manual's Appendix B template (study ID, design, comparators, re
 
 | Role | Owner | Scope |
 |---|---|---|
-| ML / engine lead | Tasbid | `engine/`, `controller/`, `model/`, runs, tuning |
-| Data and evaluation lead | (assign) | `data/`, manifests, `eval/`, statistics, data card |
-| Clinical probe and reader lead | (assign) | `probe/`, review and reader packs, codebook, liaison with the radiologist through the supervisor |
-All: run log discipline, code review of each other's modules before a gate.
+| Project lead: all development, analysis and documents | Tasbid | Everything in `src/`, `scripts/`, `configs/`, `docs/`; the experiment grid and its account assignments; tuning; gate decisions; reports; contact with the supervisor |
+| Kaggle run operators | Tazvir Rahat, Puja Ghosh (Tasbid's account is the third) | Run the jobs `grid.yaml` assigns to their account, using only `notebooks/kaggle_runner.ipynb` at the pinned commit; never edit code, configs or the HF repo by hand; after every session, report run_id, rounds completed and any error |
+
+Tasbid writes every run, handoff and failure into `RUNLOG.md` from the operators' reports and the HF repo contents.
 
 ---
 
@@ -394,12 +483,15 @@ Every run writes `run.json` (code commit, config and its hash, model revision, L
 | Probe gradient too noisy with 24 cases | Increase probe batch; compare with full-set gradient offline; report |
 | Controller always at box or always slack | Diagnose scores; widen/narrow ρ; if it persists, report as failure condition |
 | Kaggle quota or session limits | Round-level resume; two GPUs in parallel; cut Tier 2 |
-| Radiologist delay | Silver probes for engineering only; Phase 5 started early; reader pilot size negotiable |
+| No radiologist in CSE499A (D15) | Two-source agreement filter; image-dependence controls in gate G5; results labelled "automatically derived probes"; radiologist audit before the freeze in CSE499B; if audit agreement is poor, rebuild probes and rerun on development data |
+| Two accounts train the same run, or a run continues on the wrong commit or config | Lease file in the HF repo; run_id contains the config hash; resume refuses a changed config, manifest or commit |
+| Token leak (public repo) | Tokens only in Kaggle Secrets; per-member or single-repo fine-grained tokens; revoke and rotate on any suspicion |
+| An operator is unavailable | Any account can take over an expired lease; Tasbid's account is the fallback; plan each week's grid with slack |
 | Scope creep | Tier 3 only after G6; no new features after the freeze |
 
 **Stop or revise if (manual §13):** no site trade-off is observed; sketch predictions fail on development data; the optimizer cannot match the baseline; the controller mostly uses slack or suppresses important sites; probe compute dominates its benefit; readers find no credible error reduction. In each case, document the negative result with the conditions under which it occurred.
 
-**Claims we will not make:** clinical safety, diagnostic validity, formal privacy, deployment readiness, real multi-hospital evidence, or physical network savings.
+**Claims we will not make:** clinical safety, diagnostic validity, formal privacy, deployment readiness, real multi-hospital evidence, or physical network savings. In CSE499A also not: expert-verified probes or reader-assessed error rates.
 
 ---
 
@@ -429,7 +521,7 @@ outer: {type: nesterov, mu: 0.9, eta: 0.7}
 schedule: {H: 100, total_steps_per_site: 1000}
 weighting: {type: clinguard, q: by_train_count, rho: 0.5, lambda: 10, delta: 0.0, bound_mode: relative_current,
             score_source: sketch}
-probe: {set: probes_v1, batch: 24, a: 1.0, b: 1.0, tau: 1.0}
+probe: {set: probes_silver_v1, batch: 24, a: 1.0, b: 1.0, tau: 1.0}
 sketch: {type: countsketch, r: 1024}
 eval: {split: dev, decoding: greedy, max_new_tokens: 160}
 ckpt: {every_rounds: 1, hf_repo: <private>}
