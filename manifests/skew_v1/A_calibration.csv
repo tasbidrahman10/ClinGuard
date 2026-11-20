@@ -21,7 +21,7 @@ uid,image,group,needs_prior
 575,575_IM-2173-1001.dcm.png,parenchymal,1
 577,577_IM-2175-1001.dcm.png,normal,0
 620,620_IM-2202-1001.dcm.png,parenchymal,1
-765,765_IM-2311-2001.dcm.png,other_abnormal,0
+765,765_IM-2311-2001.dcm.png,other_abnormal,1
 781,781_IM-2323-1001.dcm.png,normal,0
 809,809_IM-2342-1001.dcm.png,cardio_pleural,1
 928,928_IM-2426-1001.dcm.png,normal,0

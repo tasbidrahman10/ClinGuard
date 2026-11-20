@@ -12,18 +12,18 @@
   "test"
  ],
  "files": {
-  "A_train.csv": "b164360397271a5c6d00bd0e0a54068dbe90c628905e01a09659a3f22bd4ca19",
-  "A_calibration.csv": "03cde6886e9dcd96eaab9c21573f291e77600f17b1181e1add3d02e9a36b0bd1",
-  "A_development.csv": "9ed57d4e57611d085b909e4a2674d4c49a898934eca1ec61e4b6493a104cb0cf",
-  "A_test.csv": "2b82346000de30b7b4c700262795c709b9b2470a3a2e9c5d74331bac55ce960d",
-  "B_train.csv": "c21c25e746d756a9d8262658907200d99f87043284345f72a0c1db8e7914ee4f",
-  "B_calibration.csv": "80b31babb69920414d78c3993f2b6958099de0945315824a65c117c190ebffca",
-  "B_development.csv": "630496e62276b839c22fbaae5ca098b2da73b26c2bebdc4b57071d93ffa75ac4",
-  "B_test.csv": "a3af9aace2987dceab8a047217bbc2b7e9b7f8f4971b54127bebf6dd227d337d",
-  "C_train.csv": "3017112be8fbb3d99293a5efd07809301eb39abef38b0f102bb3ed5ed66aa723",
-  "C_calibration.csv": "c6c425307c4156ea50d81405c77eadf35dab909f2c8676cd91048a04c3e2619d",
-  "C_development.csv": "2f854c717ee4dfe1ec289e175e621d5f9232bad705bfdba4e6596d5588fa4bfb",
-  "C_test.csv": "8a736b475e56effb113b7e196728677626078d9c989fe0ccbbeb5e625166bc06"
+  "A_train.csv": "59e085d10dd2eb02f68da9d2a4a90e9bd5c1ad504a75e396c754768dab49870e",
+  "A_calibration.csv": "e67deaae27e0b8282fe2705b4e26210b03fe8b51549c264aad486ff48d1c4279",
+  "A_development.csv": "d3d37e7802c23ac2fff2397290bed0dc2bcb79dbba4d3a209cfe4c5688bccac0",
+  "A_test.csv": "f3a0a0175ff07817ac93798bc63c1e22306be8c39135a81693be04bb86e0d72a",
+  "B_train.csv": "33728b44064cb37b0353d61a06f1dcc9c49e49c9f13efea50d99262559370650",
+  "B_calibration.csv": "136a85dde9823469f8e4583cb128dae105cea64a1366cba845cf0f13b7b8de3c",
+  "B_development.csv": "6fb8819dce13cf344fcec18d858221958ed9a4dfcf67be443f0fb218548eee58",
+  "B_test.csv": "54f74b0d1b3932d9adff49d9af9e47b46021e673082edb8fc1c98b73e9bcde36",
+  "C_train.csv": "30ce9a13237248fbd9534475d7efe5e64a14c67a5efeed9a1aeed96b5ac1785b",
+  "C_calibration.csv": "9242916f322865c3ab27dfa2b94428236ca24e24f0d87f57fc3b151e0f1191b3",
+  "C_development.csv": "6475b56948aa5b14cd70417060beb25a19e013c1bcc17e419d406f1d4d1872be",
+  "C_test.csv": "a696ed81aa377648f5aa2d4c550a3c14532cafac2b11dc67f40b0aa40ff460ed"
  },
  "counts": {
   "A_train": {
@@ -118,10 +118,11 @@
   "indiana_projections.csv": "7af9c8a6b4f8ae695c654ecd4208edd193a37892a5607b7cb9e609dc997e6b7a"
  },
  "clean_version": "clean_v1",
+ "prior_version": "prior_v2",
  "groups_version": "groups_v1",
  "split_seed": 20261110,
  "cleaned_text_sha256": "4796c306ec9d957a0a1a22e38b8d16b3df95b1e676ae2b4043ff961a69a4f54d",
- "image_check": "not_run",
- "status": "candidate",
- "manifest_hash": "e3e300185b13507e4d7e22151855ba76b958d8dd6b47ae3be7547c95f625c480"
+ "image_check": "passed",
+ "status": "frozen",
+ "manifest_hash": "77e5cd83bdf165f87f73c81543fa59564c9f2d126223bee45cdff5a5bb4b2348"
 }

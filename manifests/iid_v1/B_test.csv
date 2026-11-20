@@ -65,7 +65,7 @@ uid,image,group,needs_prior
 2288,2288_IM-0872-1001.dcm.png,normal,0
 2334,2334_IM-0902-1001.dcm.png,cardio_pleural,1
 2338,2338_IM-0905-1001.dcm.png,parenchymal,1
-2406,2406_IM-0954-1001.dcm.png,other_abnormal,0
+2406,2406_IM-0954-1001.dcm.png,other_abnormal,1
 2437,2437_IM-0977-2002.dcm.png,normal,0
 2492,2492_IM-1018-1001.dcm.png,cardio_pleural,1
 2493,2493_IM-1019-8001.dcm.png,normal,0

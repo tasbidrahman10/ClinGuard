@@ -12,7 +12,7 @@ uid,image,group,needs_prior
 38,38_IM-1911-1001.dcm.png,normal,0
 40,40_IM-2050-1001.dcm.png,parenchymal,0
 44,44_IM-2078-1001.dcm.png,normal,0
-55,55_IM-2154-1001.dcm.png,other_abnormal,0
+55,55_IM-2154-1001.dcm.png,other_abnormal,1
 59,59_IM-2184-1001.dcm.png,other_abnormal,1
 64,64_IM-2218-4004.dcm.png,other_abnormal,0
 70,70_IM-2264-3001.dcm.png,parenchymal,0
@@ -20,7 +20,7 @@ uid,image,group,needs_prior
 82,82_IM-2350-3001.dcm.png,other_abnormal,1
 86,86_IM-2380-1001.dcm.png,normal,0
 89,89_IM-2402-1001.dcm.png,normal,0
-94,94_IM-2436-1001.dcm.png,normal,0
+94,94_IM-2436-1001.dcm.png,normal,1
 96,96_IM-2450-2002.dcm.png,normal,0
 110,110_IM-0067-1001.dcm.png,normal,0
 112,112_IM-0080-1001.dcm.png,other_abnormal,1
@@ -69,7 +69,7 @@ uid,image,group,needs_prior
 333,333_IM-1594-1001.dcm.png,other_abnormal,0
 351,351_IM-1712-1001.dcm.png,cardio_pleural,1
 354,354_IM-1731-1001.dcm.png,normal,1
-361,361_IM-1783-1001.dcm.png,normal,0
+361,361_IM-1783-1001.dcm.png,normal,1
 366,366_IM-1820-1001.dcm.png,normal,0
 370,370_IM-1848-1001.dcm.png,normal,0
 380,380_IM-1911-2001.dcm.png,other_abnormal,0
@@ -93,7 +93,7 @@ uid,image,group,needs_prior
 491,491_IM-2111-1001.dcm.png,parenchymal,1
 492,492_IM-2112-2002.dcm.png,normal,0
 493,493_IM-2113-1001.dcm.png,other_abnormal,1
-496,496_IM-2114-1001.dcm.png,normal,0
+496,496_IM-2114-1001.dcm.png,normal,1
 499,499_IM-2116-1001.dcm.png,normal,0
 508,508_IM-2125-1001.dcm.png,normal,0
 511,511_IM-2127-1001.dcm.png,other_abnormal,0
@@ -126,7 +126,7 @@ uid,image,group,needs_prior
 685,685_IM-2254-1001.dcm.png,parenchymal,1
 688,688_IM-2256-1001.dcm.png,parenchymal,1
 691,691_IM-2258-1001.dcm.png,normal,1
-695,695_IM-2261-1001.dcm.png,cardio_pleural,0
+695,695_IM-2261-1001.dcm.png,cardio_pleural,1
 696,696_IM-2261-1001-0002.dcm.png,normal,0
 699,699_IM-2263-1001.dcm.png,cardio_pleural,1
 707,707_IM-2270-1001.dcm.png,normal,0
@@ -152,7 +152,7 @@ uid,image,group,needs_prior
 806,806_IM-2340-0001-0002.dcm.png,cardio_pleural,0
 811,811_IM-2343-1001.dcm.png,other_abnormal,1
 818,818_IM-2349-1001.dcm.png,parenchymal,1
-822,822_IM-2352-1001.dcm.png,parenchymal,0
+822,822_IM-2352-1001.dcm.png,parenchymal,1
 824,824_IM-2354-1001.dcm.png,parenchymal,0
 836,836_IM-2360-2001.dcm.png,parenchymal,0
 849,849_IM-2371-1001.dcm.png,parenchymal,0
@@ -165,7 +165,7 @@ uid,image,group,needs_prior
 910,910_IM-2416-2001.dcm.png,cardio_pleural,1
 916,916_IM-2419-1001.dcm.png,other_abnormal,1
 927,927_IM-2425-1001.dcm.png,cardio_pleural,1
-929,929_IM-2427-1001.dcm.png,parenchymal,0
+929,929_IM-2427-1001.dcm.png,parenchymal,1
 932,932_IM-2430-4004.dcm.png,normal,0
 936,936_IM-2432-1001.dcm.png,normal,0
 938,938_IM-2434-1001.dcm.png,parenchymal,1
@@ -212,7 +212,7 @@ uid,image,group,needs_prior
 1231,1231_IM-0155-1001.dcm.png,other_abnormal,0
 1236,1236_IM-0158-1001.dcm.png,normal,0
 1237,1237_IM-0159-1001.dcm.png,parenchymal,1
-1244,1244_IM-0166-2001.dcm.png,parenchymal,0
+1244,1244_IM-0166-2001.dcm.png,parenchymal,1
 1258,1258_IM-0175-1001.dcm.png,other_abnormal,1
 1272,1272_IM-0183-1001.dcm.png,parenchymal,0
 1273,1273_IM-0183-1001.dcm.png,cardio_pleural,1
@@ -248,7 +248,7 @@ uid,image,group,needs_prior
 1460,1460_IM-0298-1001.dcm.png,normal,0
 1464,1464_IM-0301-1001.dcm.png,parenchymal,0
 1465,1465_IM-0302-1001.dcm.png,other_abnormal,1
-1471,1471_IM-0304-2001.dcm.png,parenchymal,0
+1471,1471_IM-0304-2001.dcm.png,parenchymal,1
 1477,1477_IM-0309-1001.dcm.png,normal,0
 1481,1481_IM-0312-3001.dcm.png,normal,1
 1482,1482_IM-0313-1001.dcm.png,normal,0
@@ -261,7 +261,7 @@ uid,image,group,needs_prior
 1558,1558_IM-0365-1001.dcm.png,other_abnormal,0
 1564,1564_IM-0368-1001.dcm.png,parenchymal,1
 1570,1570_IM-0372-1001.dcm.png,other_abnormal,0
-1572,1572_IM-0373-1001.dcm.png,parenchymal,0
+1572,1572_IM-0373-1001.dcm.png,parenchymal,1
 1573,1573_IM-0374-1001.dcm.png,normal,0
 1574,1574_IM-0374-1001.dcm.png,normal,0
 1578,1578_IM-0376-5001.dcm.png,other_abnormal,0
@@ -282,7 +282,7 @@ uid,image,group,needs_prior
 1652,1652_IM-0428-1001.dcm.png,other_abnormal,0
 1668,1668_IM-0441-1001.dcm.png,parenchymal,0
 1673,1673_IM-0444-1001.dcm.png,other_abnormal,0
-1675,1675_IM-0445-1001.dcm.png,other_abnormal,0
+1675,1675_IM-0445-1001.dcm.png,other_abnormal,1
 1687,1687_IM-0450-1001.dcm.png,other_abnormal,0
 1693,1693_IM-0454-1001.dcm.png,parenchymal,1
 1694,1694_IM-0455-1001.dcm.png,other_abnormal,0
@@ -413,7 +413,7 @@ uid,image,group,needs_prior
 2320,2320_IM-0894-1001.dcm.png,other_abnormal,0
 2321,2321_IM-0894-1001.dcm.png,normal,0
 2328,2328_IM-0898-1001.dcm.png,cardio_pleural,1
-2340,2340_IM-0907-1001.dcm.png,other_abnormal,0
+2340,2340_IM-0907-1001.dcm.png,other_abnormal,1
 2341,2341_IM-0907-1001.dcm.png,other_abnormal,0
 2342,2342_IM-0907-1001.dcm.png,parenchymal,1
 2343,2343_IM-0908-1001.dcm.png,cardio_pleural,0
@@ -524,7 +524,7 @@ uid,image,group,needs_prior
 2874,2874_IM-1280-1001.dcm.png,parenchymal,1
 2887,2887_IM-1289-4001.dcm.png,parenchymal,0
 2888,2888_IM-1290-0001-0001.dcm.png,cardio_pleural,0
-2891,2891_IM-1294-1001.dcm.png,other_abnormal,0
+2891,2891_IM-1294-1001.dcm.png,other_abnormal,1
 2899,2899_IM-1301-1001.dcm.png,normal,0
 2903,2903_IM-1307-4004.dcm.png,other_abnormal,0
 2908,2908_IM-1312-4004.dcm.png,other_abnormal,1
@@ -614,7 +614,7 @@ uid,image,group,needs_prior
 3329,3329_IM-1594-1001.dcm.png,normal,0
 3333,3333_IM-1597-1001.dcm.png,normal,0
 3335,3335_IM-1598-1001.dcm.png,other_abnormal,0
-3337,3337_IM-1598-1001.dcm.png,other_abnormal,0
+3337,3337_IM-1598-1001.dcm.png,other_abnormal,1
 3341,3341_IM-1602-1001.dcm.png,normal,0
 3345,3345_IM-1603-1001.dcm.png,normal,0
 3360,3360_IM-1613-1001.dcm.png,parenchymal,0
@@ -622,7 +622,7 @@ uid,image,group,needs_prior
 3391,3391_IM-1637-2001.dcm.png,parenchymal,1
 3402,3402_IM-1646-1001.dcm.png,parenchymal,0
 3405,3405_IM-1647-1001.dcm.png,other_abnormal,0
-3410,3410_IM-1648-1001.dcm.png,parenchymal,0
+3410,3410_IM-1648-1001.dcm.png,parenchymal,1
 3411,3411_IM-1649-0001-0001.dcm.png,cardio_pleural,0
 3427,3427_IM-1657-1001.dcm.png,normal,0
 3428,3428_IM-1657-1001.dcm.png,cardio_pleural,0
@@ -640,7 +640,7 @@ uid,image,group,needs_prior
 3494,3494_IM-1699-1001.dcm.png,other_abnormal,0
 3498,3498_IM-1702-1001.dcm.png,cardio_pleural,0
 3503,3503_IM-1707-3001.dcm.png,normal,0
-3509,3509_IM-1711-0001-0001.dcm.png,cardio_pleural,0
+3509,3509_IM-1711-0001-0001.dcm.png,cardio_pleural,1
 3513,3513_IM-1715-1001.dcm.png,normal,0
 3514,3514_IM-1715-2001.dcm.png,other_abnormal,0
 3515,3515_IM-1715-1001.dcm.png,parenchymal,0
@@ -717,7 +717,7 @@ uid,image,group,needs_prior
 3819,3819_IM-1926-1001.dcm.png,cardio_pleural,1
 3829,3829_IM-1932-1001.dcm.png,cardio_pleural,1
 3833,3833_IM-1936-1001.dcm.png,parenchymal,1
-3843,3843_IM-1944-1001.dcm.png,other_abnormal,0
+3843,3843_IM-1944-1001.dcm.png,other_abnormal,1
 3847,3847_IM-1946-1001.dcm.png,other_abnormal,1
 3849,3849_IM-1947-1001.dcm.png,other_abnormal,0
 3860,3860_IM-1954-2001.dcm.png,normal,0

@@ -277,6 +277,7 @@ Steps:
 3. **Negative pair (finding absent).** Accept only if CheXbert labels the finding **negative** (the radiologist explicitly ruled it out) **and** MeSH does not code it. y⁺ is the template negation and y⁻ is the template positive. **"Not mentioned" never counts as absent.**
 4. **Exclude**, with a logged reason:
    - studies flagged `needs_prior`;
+   - studies whose MeSH field is "No Indexing" (never coded by the annotators, so MeSH cannot serve as a source; G1 decision);
    - findings whose source sentence was changed by `clean_v1` (deleting `XXXX` can strengthen a statement);
    - any finding where the sources disagree or CheXbert says uncertain.
 5. **Same wording style on both sides.** y⁺ and y⁻ come from the same template family and differ only in the clinical claim. The probe therefore cannot be won by preferring radiologist phrasing over template phrasing. A paraphrase set, with the report's own sentence as y⁺, is a secondary check (Section 7.4).
@@ -349,6 +350,10 @@ Prompt, decoding, max length, image resolution, checkpoint rule and metric versi
 
 ### 10.2 Automatic metrics (`eval/metrics.py`)
 Per site and pooled: RadGraph F1, CheXbert-label F1, BLEU-4, ROUGE-L, BERTScore; RadCliQ if it installs. Pin exact package and model versions (A7). These compare with reference text; they are **secondary** (manual §10.4).
+
+Two reporting subsets are also shown for every metric (G1 decision):
+- **without `needs_prior` studies**, whose references mention an earlier exam the model never sees;
+- **"novel reference"**: evaluation studies whose cleaned reference text never occurs in that partition's training split. 28% of reports are exact templates, and a memorised template inflates BLEU and ROUGE.
 
 ### 10.3 Development proxy for the primary endpoint (`eval/proxy.py`)
 The true primary endpoint needs readers, so tuning uses a pre-specified proxy: a generated report has a **proxy error** if its CheXbert labels disagree with the reference's on at least one finding labelled positive or negative in the reference (uncertain and blank handled by a fixed rule in `CODEBOOK.md`). **Worst-site proxy error rate** on development data is the selection criterion; tie-break: pooled RadGraph F1. Checkpoint rule: final round of the fixed schedule (no early-stopping search). State clearly in the report that this is a proxy.

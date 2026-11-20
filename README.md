@@ -29,7 +29,7 @@ safety, diagnostic validity or privacy guarantees. "ClinGuard" is a working labe
 | Phase | State |
 |---|---|
 | 0 Setup | Repository, tests and decision log in place. Open: private Hugging Face repo shared by the three Kaggle accounts, metric packages checked on Kaggle (G0). |
-| 1 Data | Pipeline built and run on the real files; image-open check passed (all 3,199 chosen images open). Manifests are **candidates** until the G1 review is signed off. |
+| 1 Data | **G1 passed (2026-11-20).** Manifests frozen: `skew_v1` `fba077ca06499e73`, `iid_v1` `77e5cd83bdf165f8`; all 3,199 chosen images open. |
 | 2 Engine | **G2 met.** Round loop, Nesterov outer step, uniform / fixed-q / external / loss / random weighting, checkpoint and resume, byte accounting. Tests A.1, A.2, A.3, A.7 pass on toy problems. |
 | 3 to 8 | Not started. Phase 3 (real model) is next. |
 

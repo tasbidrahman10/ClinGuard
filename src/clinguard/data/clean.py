@@ -4,18 +4,33 @@ Rules:
   1. Collapse whitespace. Original casing and punctuation are kept.
   2. IU de-identification writes XXXX. A sentence is removed when more than half of its tokens
      contain XXXX; otherwise every token containing XXXX is deleted and spacing is tidied.
-  3. needs_prior is True when the cleaned text matches a fixed word list. Such studies stay in
-     training and testing (references are not edited); results are also reported without them.
+  3. needs_prior is True when the cleaned text matches a fixed word list (version PRIOR_VERSION). Such
+     studies stay in training and testing (references are not edited); results are also reported
+     without them, and they never become probes.
+
+prior_v1 (pre-registered): the first seven words below. prior_v2 (adopted at gate G1, 2026-11-20) adds
+words that refer to an earlier exam; words that describe appearance ("increased", "old", "chronic")
+are deliberately left out, since one image can show them. A trailing * matches any word ending.
 
 Cleaned text is derived on the fly and is never written over the raw data or redistributed.
 """
 import re
 
 CLEAN_VERSION = "clean_v1"
+PRIOR_VERSION = "prior_v2"
 MIN_WORDS = 5
 MASK = "XXXX"
-PRIOR_WORDS = ["compared", "prior", "previous", "unchanged", "stable", "interval", "again"]
-_PRIOR_RE = re.compile(r"\b(" + "|".join(PRIOR_WORDS) + r")\b", re.IGNORECASE)
+PRIOR_WORDS = ["compared", "prior", "previous", "unchanged", "stable", "interval", "again",          # prior_v1
+               "previously", "redemonstrat*", "persist*", "remain", "remains", "remained",           # prior_v2
+               "resolved", "no change", "since", "now", "comparison"]
+
+
+def _word_pattern(w):
+    body = r"\s+".join(re.escape(part) for part in w.rstrip("*").split())
+    return body + (r"\w*" if w.endswith("*") else "")
+
+
+_PRIOR_RE = re.compile(r"\b(" + "|".join(_word_pattern(w) for w in PRIOR_WORDS) + r")\b", re.IGNORECASE)
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _TRAILING_PUNCT = re.compile(r"[.,;:!?]+$")
 

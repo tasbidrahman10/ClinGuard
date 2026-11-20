@@ -87,7 +87,7 @@ uid,image,group,needs_prior
 3379,3379_IM-1627-2001.dcm.png,cardio_pleural,0
 3384,3384_IM-1631-1001.dcm.png,normal,0
 3387,3387_IM-1633-1001.dcm.png,parenchymal,1
-3393,3393_IM-1637-1001.dcm.png,cardio_pleural,0
+3393,3393_IM-1637-1001.dcm.png,cardio_pleural,1
 3442,3442_IM-1667-1001.dcm.png,parenchymal,0
 3480,3480_IM-1691-1001.dcm.png,other_abnormal,0
 3520,3520_IM-1718-1001.dcm.png,parenchymal,0

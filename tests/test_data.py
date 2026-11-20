@@ -41,6 +41,18 @@ def test_needs_prior_uses_whole_words_only():
     assert not clean.needs_prior("The lungs are clear.")
 
 
+def test_needs_prior_v2_words():
+    assert clean.PRIOR_VERSION == "prior_v2"
+    for text in ("Heart and mediastinum remain normal.", "There is persistent mild elevation.",
+                 "Opacity persists in the right midlung.", "The previously seen catheter is gone.",
+                 "Redemonstration of rib deformities.", "There is no  change in the scarring.",
+                 "Resolved interstitial edema.", "The lungs now appear clear.", "Similar to comparison exam."):
+        assert clean.needs_prior(text), text
+    for text in ("Increased interstitial markings.", "Old calcified granuloma.", "Chronic appearing markings.",
+                 "Mild degenerative change of the spine.", "Remainder of the exam is normal."):
+        assert not clean.needs_prior(text), text
+
+
 # ---------------------------------------------------------------- group labels
 
 @pytest.mark.parametrize("mesh,group", [

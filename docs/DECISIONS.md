@@ -76,6 +76,13 @@ D1 to D17 are fixed as written in `IMPLEMENTATION_PLAN.md` section 2.1 (v1.1). S
 | I13 | 2026-11-20 | **Loss-weighted baseline:** w = argmax Σ wᵢ ℓᵢ/T − KL(w‖q) on the simplex inside ClinGuard's box (1 − ρ)q ≤ w ≤ (1 + ρ)q. Exact solution wᵢ = clip(qᵢ exp(ℓᵢ/T − ν), box), ν by bisection. ℓᵢ = mean loss on site i's **calibration** split at φ_t, measured before local training. Higher loss → more weight. T tuned on development data | The plan says "validation-loss weighting" without a formula. Development data may only be used for tuning and selection (manual §5.2), so the in-loop loss uses the calibration split, the data ClinGuard also sees. Same KL geometry and box as ClinGuard, so the only difference is the clinical, direction-aware signal | G4 |
 | I14 | 2026-11-20 | **Random baseline:** same solution with scores σ·zᵢ, zᵢ ~ N(0, 1) from a generator seeded by (run seed, round); a fresh draw each round, no stored state. σ is set in Phase 6 to match the spread of ClinGuard's realised weights (default 0.1 until then) | "Random weights with matched variance" (plan section 9) needs a spread parameter; seeding by round keeps resume exact | G6 |
 
+| I15 | 2026-11-20 | **G1 review decisions** (Tasbid): (1) `clean_v1` kept: dropping every XXXX sentence would remove ~14% of report words, including finding sentences; (2) `groups_v1` kept; the 82 "No Indexing" studies stay in `other_abnormal` and are never silver probes; (3) `needs_prior` word list extended to `prior_v2` (+10 words that refer to an earlier exam, +61 studies, 771 → 832); appearance words such as "increased", "old", "chronic" excluded; (4) deviation P1 approved; (5) text metrics also reported on a "novel reference" subset | Evidence in the local review sheet `data/review/G1_REVIEW.md` (not committed: quotes report text) | Frozen |
+| I16 | 2026-11-20 | `prepare_data.py --check` now rebuilds every manifest file in a temporary folder and compares bytes, not only site/role assignments | The old check would not have noticed a change in the `group` or `needs_prior` columns | Frozen |
+
+**Gate G1 passed on 2026-11-20.** Manifests frozen: `skew_v1` `fba077ca06499e73`, `iid_v1` `77e5cd83bdf165f8`.
+No study changed site or role at the freeze; only the `needs_prior` column changed (prior_v2). The split
+seed, group lists, cleaning rule and word list never change again; `tests/test_manifest.py` pins the hashes.
+
 ## 5. Not yet decided
 
 - **σ for the random baseline:** matched to ClinGuard's realised weight spread once Phase 6 runs exist

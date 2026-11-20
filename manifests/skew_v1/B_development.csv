@@ -79,12 +79,12 @@ uid,image,group,needs_prior
 3141,3141_IM-1477-1001.dcm.png,normal,0
 3158,3158_IM-1487-1001.dcm.png,cardio_pleural,1
 3204,3204_IM-1513-1001.dcm.png,cardio_pleural,0
-3272,3272_IM-1553-1001.dcm.png,parenchymal,0
+3272,3272_IM-1553-1001.dcm.png,parenchymal,1
 3300,3300_IM-1578-1001.dcm.png,cardio_pleural,1
 3317,3317_IM-1587-1001.dcm.png,normal,0
 3379,3379_IM-1627-2001.dcm.png,cardio_pleural,0
 3384,3384_IM-1631-1001.dcm.png,normal,0
-3393,3393_IM-1637-1001.dcm.png,cardio_pleural,0
+3393,3393_IM-1637-1001.dcm.png,cardio_pleural,1
 3412,3412_IM-1650-1001-0001.dcm.png,other_abnormal,0
 3451,3451_IM-1674-1001.dcm.png,cardio_pleural,1
 3479,3479_IM-1690-1001.dcm.png,cardio_pleural,0

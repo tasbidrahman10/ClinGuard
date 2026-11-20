@@ -26,7 +26,7 @@ def _image_opens(path):
         return False
 
 
-def build(raw_dir, groups_cfg, skew_cfg, iid_cfg, images_dir=None):
+def build(raw_dir, groups_cfg, skew_cfg, iid_cfg, images_dir=None, status="candidate"):
     """Returns a dict with the eligible rows, both site assignments and everything the data card reports."""
     studies = ingest.load_studies(raw_dir)
     rows, excluded, exclusion_uids = {}, Counter(), {}
@@ -55,10 +55,10 @@ def build(raw_dir, groups_cfg, skew_cfg, iid_cfg, images_dir=None):
     meta = dict(
         source="IU X-ray (Indiana University / Open-i), Kaggle copy raddar/chest-xrays-indiana-university, version 2",
         raw_sha256={f: sha256_file(os.path.join(raw_dir, f)) for f in (ingest.REPORTS_FILE, ingest.PROJECTIONS_FILE)},
-        clean_version=clean.CLEAN_VERSION, groups_version=groups_cfg["version"],
+        clean_version=clean.CLEAN_VERSION, prior_version=clean.PRIOR_VERSION, groups_version=groups_cfg["version"],
         split_seed=skew_cfg["split_seed"], cleaned_text_sha256=text_hash,
         image_check="passed" if images_dir else "not_run",
-        status="candidate",          # becomes "frozen" at gate G1
+        status=status,               # "candidate" until gate G1, then "frozen"
     )
     return dict(n_total=len(studies), n_images=sum(s.n_images for s in studies), rows=rows,
                 excluded=excluded, exclusion_uids=exclusion_uids, skew=skew, iid=iid, meta=meta)
