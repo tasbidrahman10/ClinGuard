@@ -98,6 +98,8 @@ D1 to D17 are fixed as written in `IMPLEMENTATION_PLAN.md` section 2.1 (v1.1). S
 No study changed site or role at the freeze; only the `needs_prior` column changed (prior_v2). The split
 seed, group lists, cleaning rule and word list never change again; `tests/test_manifest.py` pins the hashes.
 
+| I29 | 2026-11-23 | **Vision tower precision is a run setting** (`model.vision_fp16`; default false, so earlier run ids are unchanged). When true, bitsandbytes skips `model.visual` and `lm_head` (`load.VISION_SKIP`): the language model is NF4, the vision tower and merger stay fp16 (+~1 GB). Session 4 measures with finding probes whether the 4-bit vision tower is what stops the model from seeing findings, and retrains sites A and B with the fp16 vision tower | bitsandbytes' default quantizes every linear layer except the output layer; Qwen2.5-VL marks no module to keep, so sessions 2–3 quantized all 162 vision layers. In session 3 no model's prediction depended on which X-ray it saw | G3 |
+
 ## 5. Not yet decided
 
 - **σ for the random baseline:** matched to ClinGuard's realised weight spread once Phase 6 runs exist

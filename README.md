@@ -24,14 +24,14 @@ safety, diagnostic validity or privacy guarantees. "ClinGuard" is a working labe
 | `src/clinguard/engine/` | DiLoCo round loop, outer step, weighting, checkpoints, cost accounting |
 | `tests/` | Unit tests, including the manual's Appendix A tests |
 
-## Status (2026-11-22)
+## Status (2026-11-23)
 
 | Phase | State |
 |---|---|
 | 0 Setup | Repository, tests and decision log in place. Open: private Hugging Face repo shared by the three Kaggle accounts, metric packages checked on Kaggle (G0). |
 | 1 Data | **G1 passed (2026-11-20).** Manifests frozen: `skew_v1` `fba077ca06499e73`, `iid_v1` `77e5cd83bdf165f8`; all 3,199 chosen images open. |
 | 2 Engine | **G2 met.** Round loop, Nesterov outer step, uniform / fixed-q / external / loss / random weighting, checkpoint and resume, byte accounting. Tests A.1, A.2, A.3, A.7 pass on toy problems. |
-| 3 Model | **In progress.** Local half done: fixed-basis LoRA, examples and batches, the model-backed site, generation, test A.4; the full pipeline runs and resumes bit for bit on a tiny Qwen2.5-VL with real images. Kaggle sessions 1–2 done: 4-bit fp16 training is stable, 4.3 s per step in a real run, resume works (the 0.3% gap is GPU nondeterminism). **G3 not yet passed:** the site-A model collapsed to a normal template and only matches a model that always writes "normal" (I27). Next: Kaggle session 3 (`notebooks/kaggle_session3.ipynb`): learning rate, LoRA capacity, site B, and an image test. |
+| 3 Model | **In progress.** Local half done: fixed-basis LoRA, examples and batches, the model-backed site, generation, test A.4; the full pipeline runs and resumes bit for bit on a tiny Qwen2.5-VL with real images. Kaggle sessions 1–3 done: 4-bit fp16 training is stable, 4.3 s per step in a real run, resume works (the 0.3% gap is GPU nondeterminism). **G3 not yet passed:** no setting (learning rate, LoRA capacity, site B) beats a model that always writes "normal" (I27), and no model's prediction depends on which X-ray it sees. Sessions 2–3 also quantized the vision tower to 4 bit. Next: Kaggle session 4 (`notebooks/kaggle_session4.ipynb`): a vision check of the base model and retraining with an fp16 vision tower (I29). |
 | 4 to 8 | Not started. |
 
 Plan v1.1 (2026-11-20): no radiologist in CSE499A, so probes are automatically derived ("silver") and the

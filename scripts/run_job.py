@@ -61,7 +61,8 @@ def build_model(cfg, store, work_dir):
     processor = load.load_processor(mc.get("name", load.MODEL_ID), mc.get("revision", load.MODEL_REVISION),
                                     image_pixels=mc["pixels"])
     model = load.load_model(mc.get("name", load.MODEL_ID), mc.get("revision", load.MODEL_REVISION), quant=quant,
-                            compute_dtype=dtype, kbit_prepare=mc.get("kbit_prepare", False))
+                            compute_dtype=dtype, kbit_prepare=mc.get("kbit_prepare", False),
+                            vision_fp16=mc.get("vision_fp16", False))
     model = lora.apply_fixed_basis_lora(model, targets=tuple(cfg["lora"].get("targets", lora.TARGETS)))
     a_local = os.path.join(work_dir, "shared", os.path.basename(cfg["lora"]["a_file"]))
     if not os.path.exists(a_local):
