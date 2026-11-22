@@ -11,6 +11,8 @@ Plan date: 2026-11-10, **revised 2026-11-20 (v1.1)**. Source protocol: "ClinGuar
 4. **Roles**: Tasbid leads all development; the other two members operate Kaggle runs (Section 13).
 5. **Semester split** made explicit (Section 1, Section 12). The internal test split stays locked through CSE499A.
 
+**Revision 2026-11-22 (G3).** The G3 learning criterion now compares against a model that always writes a normal report, not only against zero-shot (I27, `docs/DECISIONS.md`); the LoRA target set became a run setting so a wider set can be tested (I28).
+
 **This plan supersedes the earlier PoolTrain / BatchNorm direction** (old `CLAUDE.md`). Only the engineering lessons carry over: a tested Nesterov outer step, per-worker optimizer state, exact checkpoint/resume, pre-registered criteria, and honest reporting.
 
 ---
@@ -427,7 +429,7 @@ Tasks:
 - Shared-compute tooling (Section 4.1): `utils/hf_sync.py` and `scripts/run_job.py`. They handle lease, per-round upload, resume from HF and the commit check. The checkpoint also stores CUDA RNG state. `notebooks/kaggle_runner.ipynb` is the one runbook notebook operators use. A first `grid.yaml` is written.
 - Resume and handoff tests with the real model (short runs): resume on the same account; then two rounds on account 1, continued on account 2. Compare against an uninterrupted run and record the gap (A10).
 
-**Gate G3:** fine-tuned single-site model clearly beats zero-shot on development metrics; no NaNs in fp16 (or fallback chosen and logged); measured time per run recorded; compute budget table in Section 11 updated; Tier 2 scope decided; cross-account handoff works and its numerical gap is recorded. **Stop and fix if base report generation is broken** (manual §13).
+**Gate G3:** a fine-tuned single-site model has fewer proxy errors than the **always-normal report** on the pooled development studies (paired, one-sided exact McNemar p < 0.05) and its reports assert findings (revised 2026-11-22, I27: in session 2 the site-A model beat zero-shot while writing one normal template); no NaNs in fp16 (or fallback chosen and logged); measured time per run recorded; compute budget table in Section 11 updated; Tier 2 scope decided; cross-account handoff works and its numerical gap is recorded. **Stop and fix if base report generation is broken** (manual §13).
 
 ### Phase 4 — Baseline pilots and RQ1 (weeks 4–6)
 Tasks: local-only, FedAvg, uniform and fixed-q DiLoCo on seed 11; tuning on development data; RQ1 sweep over H on both partitions; per-site proxy error, per-site metrics and cost tables.

@@ -5,6 +5,9 @@
 
 # Run outputs and checkpoints (synced to the private Hugging Face repo instead)
 /runs/
+/runs_eval/
+/runs_work/
+/diagnostics/
 *.pt
 *.safetensors
 

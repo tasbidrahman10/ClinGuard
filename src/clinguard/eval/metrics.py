@@ -47,6 +47,26 @@ def proxy_errors(ref, hyp):
     return out
 
 
+def always_normal_error(ref):
+    """proxy_v1 error of a report that asserts no finding (the "always normal" baseline): an error exactly
+    when the reference has a positive finding (omitted or contradicted; a false finding is impossible)."""
+    return any(ref[CHEXBERT_CLASSES.index(c)] == POS for c in _FINDINGS)
+
+
+def asserts_finding(labels):
+    return any(labels[CHEXBERT_CLASSES.index(c)] in (POS, UNC) for c in _FINDINGS)
+
+
+def mcnemar_one_sided(model_errors, baseline_errors):
+    """Paired exact McNemar test that the model makes FEWER errors than the baseline on the same reports.
+    b = model wrong, baseline right; c = model right, baseline wrong; p = P(X <= b), X ~ Binomial(b + c, 1/2)."""
+    b = sum(m and not s for m, s in zip(model_errors, baseline_errors))
+    c = sum(s and not m for m, s in zip(model_errors, baseline_errors))
+    n = b + c
+    p = sum(math.comb(n, k) for k in range(b + 1)) / 2 ** n if n else 1.0
+    return dict(model_only_errors=b, baseline_only_errors=c, p_one_sided=p)
+
+
 def binary(labels):
     """Report-generation convention: positive or uncertain -> 1, otherwise 0."""
     return [1 if v in (POS, UNC) else 0 for v in labels]
@@ -134,10 +154,19 @@ def group_metrics(scored):
     refs = [s["ref_labels"] for s in scored]
     hyps = [s["hyp_labels"] for s in scored]
     n = len(scored)
+    texts = Counter(s["generated"].strip() for s in scored)
+    finding_idx = [CHEXBERT_CLASSES.index(c) for c in _FINDINGS]
+    positives = [(r, h, i) for r, h in zip(refs, hyps) for i in finding_idx if r[i] == POS]
+    recalled = sum(h[i] in (POS, UNC) for _, h, i in positives)
     return dict(
         n=n,
         proxy_error_rate=sum(s["proxy_error"] for s in scored) / n,
         proxy_errors=sum(s["proxy_error"] for s in scored),
+        always_normal_error_rate=sum(always_normal_error(r) for r in refs) / n,
+        share_asserting_a_finding=sum(asserts_finding(h) for h in hyps) / n,
+        finding_recall=recalled / len(positives) if positives else None,
+        distinct_text_share=len(texts) / n,
+        top_text_share=texts.most_common(1)[0][1] / n,
         chexbert_f1_14=f1_scores(refs, hyps),
         chexbert_f1_5=f1_scores(refs, hyps, FIVE_CLASSES),
         radgraph=dict(zip(("simple", "partial", "complete"),
@@ -162,8 +191,12 @@ def summarize(scored, training_texts):
         per_site = {site: group_metrics([s for s in rows if s["site"] == site]) for site in sites}
         rated = {site: m["proxy_error_rate"] for site, m in per_site.items() if m["n"]}
         worst = max(rated, key=rated.get) if rated else None
+        normal = {site: m["always_normal_error_rate"] for site, m in per_site.items() if m["n"]}
         out[name] = dict(sites=per_site, pooled=group_metrics(rows),
-                         worst_site=dict(site=worst, proxy_error_rate=rated.get(worst)))
+                         worst_site=dict(site=worst, proxy_error_rate=rated.get(worst),
+                                         always_normal_worst=max(normal.values()) if normal else None),
+                         vs_always_normal=mcnemar_one_sided([s["proxy_error"] for s in rows],
+                                                            [always_normal_error(s["ref_labels"]) for s in rows]))
     return dict(proxy_version=PROXY_VERSION, subsets=out)
 
 

@@ -76,12 +76,35 @@ def test_summary_sites_subsets_and_worst_site():
     allsub = summ["subsets"]["all"]
     assert allsub["sites"]["A"]["proxy_error_rate"] == 0.5
     assert allsub["sites"]["B"]["proxy_error_rate"] == pytest.approx(1 / 3)
-    assert allsub["worst_site"] == dict(site="A", proxy_error_rate=0.5)
+    assert allsub["worst_site"] == dict(site="A", proxy_error_rate=0.5, always_normal_worst=1.0)
     assert allsub["pooled"]["n"] == 5 and allsub["pooled"]["radgraph"]["partial"] == 0.5
     assert summ["subsets"]["no_prior"]["sites"]["B"]["n"] == 2
     novel = summ["subsets"]["novel_reference"]["sites"]["B"]
     assert novel["n"] == 2 and novel["proxy_error_rate"] == 0.0           # the templated reference is excluded
     assert summ["proxy_version"] == "proxy_v1"
+
+
+def test_always_normal_baseline_and_collapse_indicators():
+    chexbert, radgraph = _fake_scorers()
+    scored = M.score_reports(_rows(), chexbert, radgraph)
+    # references: effusion, effusion, clear, clear, template -> always-normal errs on the two effusions
+    assert [M.always_normal_error(s["ref_labels"]) for s in scored] == [True, True, False, False, False]
+    allsub = M.summarize(scored, training_texts=set())["subsets"]["all"]
+    pooled = allsub["pooled"]
+    assert pooled["always_normal_error_rate"] == pytest.approx(2 / 5)
+    assert pooled["finding_recall"] == pytest.approx(1 / 2)                 # one of two reference effusions
+    assert pooled["share_asserting_a_finding"] == pytest.approx(2 / 5)       # "effusion" generated twice
+    assert pooled["distinct_text_share"] == pytest.approx(2 / 5) and pooled["top_text_share"] == pytest.approx(3 / 5)
+    assert allsub["worst_site"]["always_normal_worst"] == 1.0                # site A: both references positive
+    # model errors [F, T, F, F, T] vs always-normal [T, T, F, F, F]: one each way -> p = P(X <= 1 | 2) = 3/4
+    assert allsub["vs_always_normal"] == dict(model_only_errors=1, baseline_only_errors=1, p_one_sided=0.75)
+
+
+def test_mcnemar_one_sided():
+    assert M.mcnemar_one_sided([False] * 6, [True] * 6)["p_one_sided"] == pytest.approx(1 / 64)
+    assert M.mcnemar_one_sided([True, False], [True, False])["p_one_sided"] == 1.0          # no discordant pairs
+    r = M.mcnemar_one_sided([True] + [False] * 9, [False] + [True] * 9)                      # b = 1, c = 9
+    assert r["p_one_sided"] == pytest.approx((1 + 10) / 1024)
 
 
 def test_real_scorers_in_the_evaluation_environment():

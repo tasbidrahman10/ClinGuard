@@ -1,0 +1,13 @@
+# Gate G3 retry (Kaggle session 3): capacity effect. As g3_A_lr2e4 but LoRA also on the language model's MLP
+# projections (gate/up/down): phi = 16,515,072 instead of 2,654,208. The q/k/v/o A matrices are the primary
+# file's, unchanged (scripts/make_lora_a.py, decision I28).
+method: g3_A_mlp_lr2e4
+partition: skew_v1
+sites: [A]
+seed: 11
+model: {pixels: 200704, micro_batch: 4, grad_accum: 1, lr: 2.0e-4, warmup_steps: 50, quant: nf4, kbit_prepare: false}
+engine: {H: 100, total_steps_per_site: 1000, eta_out: 1.0, mu: 0.0, weighting: uniform}
+lora: {targets: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj],
+       a_file: shared/lora_A_r16_qkvo_mlp_seed2026.safetensors,
+       a_sha256: 6333c6e57c52ae0aa8580d09292cd58ad5f8bcb5fa92cd298bc479d17c8d5dc4}
+eval: {dev_sites: [A, B, C], gen_batch: 8, max_new_tokens: 160}

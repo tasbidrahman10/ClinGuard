@@ -50,6 +50,26 @@ def git_commit():
         return None
 
 
+def build_model(cfg, store, work_dir):
+    """(processor, model, amp_dtype) for a run config: base model, LoRA on cfg["lora"]["targets"] (default
+    q/k/v/o), and the shared A matrices downloaded from the store and checked against their SHA-256."""
+    import torch
+    from clinguard.model import load, lora
+    mc = cfg["model"]
+    quant = mc.get("quant", "nf4")
+    dtype = torch.float16 if quant == "nf4" else torch.float32
+    processor = load.load_processor(mc.get("name", load.MODEL_ID), mc.get("revision", load.MODEL_REVISION),
+                                    image_pixels=mc["pixels"])
+    model = load.load_model(mc.get("name", load.MODEL_ID), mc.get("revision", load.MODEL_REVISION), quant=quant,
+                            compute_dtype=dtype, kbit_prepare=mc.get("kbit_prepare", False))
+    model = lora.apply_fixed_basis_lora(model, targets=tuple(cfg["lora"].get("targets", lora.TARGETS)))
+    a_local = os.path.join(work_dir, "shared", os.path.basename(cfg["lora"]["a_file"]))
+    if not os.path.exists(a_local):
+        store.download(cfg["lora"]["a_file"], a_local)
+    lora.load_lora_a(model, a_local, cfg["lora"]["a_sha256"])
+    return processor, model, (torch.float16 if quant == "nf4" else None)
+
+
 def write_jsonl(path, rows):
     with open(path, "w", encoding="utf-8") as f:
         for r in rows:
@@ -102,33 +122,21 @@ def main(argv=None):
         print("resuming from the store", flush=True)
 
     # Heavy imports only after the cheap checks above.
-    import torch
     from clinguard.data import dataset
     from clinguard.engine.runner import RunConfig, run
-    from clinguard.model import load, lora, params
+    from clinguard.model import params
     from clinguard.model.generate import generate_findings
     from clinguard.model.site import VLMSite
     from safetensors.torch import save_file
 
     m = dataset.verify_source(a.raw_dir, a.manifest_dir, cfg["partition"])
     mc, lim = cfg["model"], cfg.get("limits", {})
-    quant = mc.get("quant", "nf4")
-    dtype = torch.float16 if quant == "nf4" else torch.float32
-    processor = load.load_processor(mc.get("name", load.MODEL_ID), mc.get("revision", load.MODEL_REVISION),
-                                    image_pixels=mc["pixels"])
-    model = load.load_model(mc.get("name", load.MODEL_ID), mc.get("revision", load.MODEL_REVISION), quant=quant,
-                            compute_dtype=dtype, kbit_prepare=mc.get("kbit_prepare", False))
-    model = lora.apply_fixed_basis_lora(model)
-    a_local = os.path.join(a.work_dir, "shared", os.path.basename(cfg["lora"]["a_file"]))
-    if not os.path.exists(a_local):
-        store.download(cfg["lora"]["a_file"], a_local)
-    lora.load_lora_a(model, a_local, cfg["lora"]["a_sha256"])
+    processor, model, amp = build_model(cfg, store, a.work_dir)
 
     def examples(site, role, key):
         ex = dataset.load_examples(a.raw_dir, a.images_dir, a.manifest_dir, cfg["partition"], site, role)
         return ex[:lim[key]] if key in lim else ex
 
-    amp = torch.float16 if quant == "nf4" else None
     sites = [VLMSite(s, model, processor, examples(s, "train", "train"), examples(s, "calibration", "calib"),
                      micro_batch=mc["micro_batch"], grad_accum=mc["grad_accum"], lr=mc["lr"],
                      warmup_steps=mc["warmup_steps"], seed=cfg["seed"] * 1000 + i, amp_dtype=amp)

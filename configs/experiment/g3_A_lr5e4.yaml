@@ -1,0 +1,10 @@
+# Gate G3 retry (Kaggle session 3): learning-rate effect. As g3_A_lr2e4 but lr 5e-4 (B-only LoRA with a
+# fixed random A may need a larger step than standard LoRA).
+method: g3_A_lr5e4
+partition: skew_v1
+sites: [A]
+seed: 11
+model: {pixels: 200704, micro_batch: 4, grad_accum: 1, lr: 5.0e-4, warmup_steps: 50, quant: nf4, kbit_prepare: false}
+engine: {H: 100, total_steps_per_site: 1000, eta_out: 1.0, mu: 0.0, weighting: uniform}
+lora: {a_file: shared/lora_A_r16_seed2026.safetensors, a_sha256: 9d927008b45ce51c3fc190f4dca23059290a9b2beaac43d16dccd9c2e0dbef56}
+eval: {dev_sites: [A, B, C], gen_batch: 8, max_new_tokens: 160}

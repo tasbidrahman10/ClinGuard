@@ -80,15 +80,25 @@ def main(argv=None):
         store.upload_files({f"runs/{run_id}/eval/dev_metrics.json": os.path.join(out, "dev_metrics.json")},
                            f"{run_id}: development metrics ({metrics.PROXY_VERSION})")
 
-    s = summary["subsets"]["all"]
-    print(f"{run_id}: {len(scored)} reports")
-    for site, m in s["sites"].items():
-        print(f"  {site}: n={m['n']} proxy error {m['proxy_error_rate']:.3f} | CheXbert F1-14 micro "
-              f"{m['chexbert_f1_14']['micro']:.3f} | RadGraph partial {m['radgraph']['partial']:.3f} | "
-              f"BLEU-4 {m['bleu4']:.3f} | ROUGE-L {m['rouge_l']:.3f} | words {m['mean_words_generated']:.0f}")
-    w = s["worst_site"]
-    print(f"  worst site: {w['site']} proxy error {w['proxy_error_rate']:.3f}")
+    print_summary(summary)
     return summary
+
+
+def print_summary(summary):
+    s = summary["subsets"]["all"]
+    print(f"{summary['run_id']}: {summary['n_reports']} reports (proxy error: automatic proxy, not reader-assessed)")
+    for site, m in list(s["sites"].items()) + [("pooled", s["pooled"])]:
+        recall = "-" if m["finding_recall"] is None else f"{m['finding_recall']:.2f}"
+        print(f"  {site:6s} n={m['n']:3d} proxy error {m['proxy_error_rate']:.3f} (always-normal "
+              f"{m['always_normal_error_rate']:.3f}) | CheXbert F1-14 micro {m['chexbert_f1_14']['micro']:.3f} | "
+              f"RadGraph partial {m['radgraph']['partial']:.3f} | BLEU-4 {m['bleu4']:.3f} | ROUGE-L {m['rouge_l']:.3f}")
+        print(f"  {'':6s} asserts a finding {m['share_asserting_a_finding']:.0%} | finding recall {recall} | "
+              f"distinct texts {m['distinct_text_share']:.0%} | most common text {m['top_text_share']:.0%} | "
+              f"words {m['mean_words_generated']:.0f}")
+    w, v = s["worst_site"], s["vs_always_normal"]
+    print(f"  worst site: {w['site']} proxy error {w['proxy_error_rate']:.3f} (always-normal worst {w['always_normal_worst']:.3f})")
+    print(f"  vs always-normal, pooled, paired: model-only errors {v['model_only_errors']}, always-normal-only errors "
+          f"{v['baseline_only_errors']}, one-sided exact McNemar p = {v['p_one_sided']:.3g}")
 
 
 if __name__ == "__main__":
