@@ -1,7 +1,7 @@
 """Fixed-basis LoRA (decision D5, plan section 6.2).
 
-LoRA (rank 16, alpha 32, dropout 0) goes on q_proj, k_proj, v_proj and o_proj of the LANGUAGE model only;
-no vision-tower module is ever matched. Every A matrix is frozen and identical at all sites and in every
+By default LoRA (rank 16, alpha 32, dropout 0) goes on q_proj, k_proj, v_proj and o_proj of the LANGUAGE
+model only; vision-tower modules are matched only through the explicit target "vision" (I30). Every A matrix is frozen and identical at all sites and in every
 run; only the B matrices train, so for any weights w,  sum_i w_i B_i A = (sum_i w_i B_i) A  and the
 weighted average of site updates is exact (manual section 5.3, test A.4).
 
@@ -24,22 +24,33 @@ from clinguard.utils.hashing import sha256_file
 
 TARGETS = ("q_proj", "k_proj", "v_proj", "o_proj")
 MLP_TARGETS = ("gate_proj", "up_proj", "down_proj")
+VISION = "vision"           # every linear layer of the vision tower and of the merger (connector), I30
 RANK, ALPHA, LORA_SEED = 16, 32, 2026
 
 
 def target_module_names(model, targets=TARGETS):
-    """Full names of the language-model modules whose last name part is in `targets`, sorted.
-    Refuses any vision module (the vision tower has its own q/k/v and MLP projections)."""
-    unknown = set(targets) - set(TARGETS) - set(MLP_TARGETS)
+    """Full names of the modules that get LoRA, sorted.
+
+    Language-model targets (q/k/v/o, gate/up/down) match by last name part inside the language model only,
+    so they never touch the vision tower, which has projections of the same names. The special target
+    "vision" adds every nn.Linear under model.visual: the 32 vision blocks and the merger."""
+    unknown = set(targets) - set(TARGETS) - set(MLP_TARGETS) - {VISION}
     if unknown:
         raise ValueError(f"unsupported LoRA targets {sorted(unknown)}")
-    names = sorted(n for n, _ in model.named_modules()
-                   if n.rsplit(".", 1)[-1] in targets and "language_model" in n)
-    if not names:
-        raise ValueError(f"no language-model modules match {list(targets)}")
+    text = set(targets) - {VISION}
+    names = [n for n, _ in model.named_modules()
+             if text and n.rsplit(".", 1)[-1] in text and "language_model" in n]
     if any("visual" in n or "vision" in n for n in names):
-        raise ValueError("a vision-tower module matched the LoRA targets")
-    return names
+        raise ValueError("a vision-tower module matched a language-model LoRA target")
+    if VISION in targets:
+        vision = [n for n, mod in model.named_modules()
+                  if isinstance(mod, torch.nn.Linear) and ".visual." in f".{n}."]
+        if not vision:
+            raise ValueError("the model has no vision-tower linear layers")
+        names += vision
+    if not names:
+        raise ValueError(f"no modules match {list(targets)}")
+    return sorted(names)
 
 
 def apply_fixed_basis_lora(model, rank=RANK, alpha=ALPHA, lora_seed=LORA_SEED, targets=TARGETS):

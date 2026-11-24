@@ -1,0 +1,14 @@
+# Gate G3, Kaggle session 5 ("teach the eyes", decision I30), report objective. LoRA on the vision tower and
+# merger only (162 layers, phi = 6,893,568), language model frozen; trained on the report loss with the
+# training studies of all three sites pooled (a centralised diagnostic, not a federated run).
+# Question: does the report loss alone teach the vision side to see findings? Checked by vision_check.py.
+method: g3_eyes_report
+partition: skew_v1
+sites: ["A+B+C"]
+seed: 11
+model: {pixels: 200704, micro_batch: 4, grad_accum: 1, lr: 2.0e-4, warmup_steps: 50, quant: nf4, kbit_prepare: false,
+        vision_fp16: true}
+engine: {H: 100, total_steps_per_site: 1000, eta_out: 1.0, mu: 0.0, weighting: uniform}
+lora: {targets: [vision], a_file: shared/lora_A_r16_vision_seed2026.safetensors,
+       a_sha256: e75e334283a9ef489ad65b9b9187076465712347acbde23ecdd52cacc776d35c}
+eval: {dev_sites: [A, B, C], gen_batch: 8, max_new_tokens: 160}

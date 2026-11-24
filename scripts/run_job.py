@@ -135,13 +135,32 @@ def main(argv=None):
     processor, model, amp = build_model(cfg, store, a.work_dir)
 
     def examples(site, role, key):
-        ex = dataset.load_examples(a.raw_dir, a.images_dir, a.manifest_dir, cfg["partition"], site, role)
+        """A site name like "A+B+C" pools those sites' studies (a centralised diagnostic, not a federated site)."""
+        ex = [e for s in site.split("+")
+              for e in dataset.load_examples(a.raw_dir, a.images_dir, a.manifest_dir, cfg["partition"], s, role)]
         return ex[:lim[key]] if key in lim else ex
 
-    sites = [VLMSite(s, model, processor, examples(s, "train", "train"), examples(s, "calibration", "calib"),
-                     micro_batch=mc["micro_batch"], grad_accum=mc["grad_accum"], lr=mc["lr"],
-                     warmup_steps=mc["warmup_steps"], seed=cfg["seed"] * 1000 + i, amp_dtype=amp)
-             for i, s in enumerate(cfg["sites"])]
+    objective = cfg.get("objective", "report")
+    if objective not in ("report", "findings"):
+        raise SystemExit(f"unknown objective '{objective}'")
+    site_kw = dict(micro_batch=mc["micro_batch"], grad_accum=mc["grad_accum"], lr=mc["lr"],
+                   warmup_steps=mc["warmup_steps"], amp_dtype=amp)
+    if objective == "report":
+        sites = [VLMSite(s, model, processor, examples(s, "train", "train"), examples(s, "calibration", "calib"),
+                         seed=cfg["seed"] * 1000 + i, **site_kw)
+                 for i, s in enumerate(cfg["sites"])]
+    else:                                                   # finding-sentence pairs (I30)
+        from clinguard.model.finding_site import FindingSite, finding_pairs
+        labels = json.loads(store.read_bytes(cfg["finding_labels"]))
+        sites = []
+        for i, s in enumerate(cfg["sites"]):
+            pairs, table = finding_pairs(examples(s, "train", "train"), labels, seed=cfg["seed"] * 1000 + i,
+                                         **cfg.get("finding_pairs", {}))
+            print(f"site {s}: {len(pairs)} training pairs; " + "; ".join(
+                f"{f} {t['present']}/{t['absent']}" + ("" if t["used"] else " (skipped)") for f, t in table.items()),
+                flush=True)
+            sites.append(FindingSite(s, model, processor, pairs, examples(s, "calibration", "calib"),
+                                     seed=cfg["seed"] * 1000 + i, **site_kw))
     engine = RunConfig(**{**cfg["engine"], "seed": cfg["seed"], "method": cfg["method"]})
     extra = {k: v for k, v in cfg.items() if k not in ("engine", "seed", "method")}
 

@@ -1,0 +1,17 @@
+# Gate G3, Kaggle session 5 ("teach the eyes", decision I30), finding-sentence objective. Same trainable part
+# as g3_eyes_report (vision tower + merger LoRA, language model frozen, all sites pooled), but trained to
+# prefer the correct sentence of a pair ("The heart is enlarged." / "The heart size is normal."), with
+# studies with and without each finding balanced (labels: CheXbert on the training reports). 4,541 pairs,
+# 7 findings. Question: can the vision side learn to see findings from ~2,200 studies at all?
+method: g3_eyes_findings
+partition: skew_v1
+sites: ["A+B+C"]
+seed: 11
+objective: findings
+finding_labels: labels/chexbert_train.json
+model: {pixels: 200704, micro_batch: 4, grad_accum: 1, lr: 2.0e-4, warmup_steps: 50, quant: nf4, kbit_prepare: false,
+        vision_fp16: true}
+engine: {H: 100, total_steps_per_site: 1000, eta_out: 1.0, mu: 0.0, weighting: uniform}
+lora: {targets: [vision], a_file: shared/lora_A_r16_vision_seed2026.safetensors,
+       a_sha256: e75e334283a9ef489ad65b9b9187076465712347acbde23ecdd52cacc776d35c}
+eval: {dev_sites: []}

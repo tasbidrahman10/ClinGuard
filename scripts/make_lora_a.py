@@ -41,7 +41,7 @@ def main(argv=None):
     p.add_argument("--store-dir", help="local folder standing in for the HF repo (tests)")
     p.add_argument("--targets", nargs="+", required=True)
     p.add_argument("--out", required=True, help="path inside the store, e.g. shared/lora_A_r16_qkvo_mlp_seed2026.safetensors")
-    p.add_argument("--base", default=PRIMARY_A)
+    p.add_argument("--base", default=PRIMARY_A, help='"none": draw every matrix (no module shared with the primary file)')
     p.add_argument("--base-sha256", default=PRIMARY_A_SHA)
     p.add_argument("--model", default=load.MODEL_ID)
     p.add_argument("--revision", default=load.MODEL_REVISION)
@@ -52,12 +52,15 @@ def main(argv=None):
         p.error("give exactly one of --hf-repo and --store-dir")
     store = HFStore(a.hf_repo) if a.hf_repo else LocalStore(a.store_dir)
 
-    base_local = os.path.join(a.work_dir, "shared", os.path.basename(a.base))
-    if not os.path.exists(base_local):
-        store.download(a.base, base_local)
-    if sha256_file(base_local) != a.base_sha256:
-        raise SystemExit(f"{a.base}: checksum does not match {a.base_sha256[:12]}...")
-    base = load_file(base_local)
+    if a.base == "none":            # a target set that shares no module with the primary file (e.g. vision only)
+        base = {}
+    else:
+        base_local = os.path.join(a.work_dir, "shared", os.path.basename(a.base))
+        if not os.path.exists(base_local):
+            store.download(a.base, base_local)
+        if sha256_file(base_local) != a.base_sha256:
+            raise SystemExit(f"{a.base}: checksum does not match {a.base_sha256[:12]}...")
+        base = load_file(base_local)
 
     model = skeleton(a.model, a.revision)
     specs = lora.lora_a_specs(model, targets=tuple(a.targets))
