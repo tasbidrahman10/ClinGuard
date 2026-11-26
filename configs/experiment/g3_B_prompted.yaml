@@ -1,0 +1,23 @@
+# Gate G3, Kaggle session 7 (decision I32): the diagnosis prompt. As g3_B_twostage (session 6: the vision side
+# taught in session 5 merged and frozen, LoRA on the language model's q/k/v/o, site B's reports), plus one
+# sentence in the prompt naming findings: in training the report's own findings (CheXbert labels), at
+# generation the predictions of the finding classifier eyes_v1 (scripts/classify.py), and once more the true
+# findings (generations_oracle, a diagnostic). Judged against always-normal and the constant report (I32).
+method: g3_B_prompted
+partition: skew_v1
+sites: [B]
+seed: 11
+model: {pixels: 200704, micro_batch: 4, grad_accum: 1, lr: 2.0e-4, warmup_steps: 50, quant: nf4, kbit_prepare: false,
+        vision_fp16: true}
+engine: {H: 100, total_steps_per_site: 1000, eta_out: 1.0, mu: 0.0, weighting: uniform}
+lora: {a_file: shared/lora_A_r16_seed2026.safetensors, a_sha256: 9d927008b45ce51c3fc190f4dca23059290a9b2beaac43d16dccd9c2e0dbef56}
+vision_stage: {run_id: g3_eyes_findings_skew_v1_H100_s11_fda7dd18,
+               phi_sha256: 1d8be8d2d2e70321252e8d920d4f7e4e9c0de48689618fc57fc0db6380f5bdb9,
+               targets: [vision], a_file: shared/lora_A_r16_vision_seed2026.safetensors,
+               a_sha256: e75e334283a9ef489ad65b9b9187076465712347acbde23ecdd52cacc776d35c}
+diagnosis_prompt: {findings: [Enlarged Cardiomediastinum, Cardiomegaly, Lung Opacity, Lung Lesion, Atelectasis,
+                             Pleural Effusion, Fracture, Support Devices],
+                   train_labels: labels/chexbert_train.json, calib_labels: labels/chexbert_calibration.json,
+                   predictions: classifier/eyes_v1/predictions.json,
+                   oracle_labels: diagnostics/dev_ref_labels_chexbert.json}
+eval: {dev_sites: [A, B, C], gen_batch: 8, max_new_tokens: 160}

@@ -9,6 +9,13 @@ model, LoRA (shared A verified by checksum) and sites -> run the DiLoCo engine, 
 renewing the lease after every round -> save phi_final -> generate on the development split -> finish.
 Rerunning the same command after a crash continues where the store left off.
 
+Diagnosis prompt (decision I32), config key `diagnosis_prompt`:
+  {findings, train_labels, calib_labels, predictions, oracle_labels (optional), wait_minutes (optional)}
+The training and calibration prompts name each study's TRUE findings (CheXbert labels of its own report);
+the development reports are written with the classifier's predictions (scripts/classify.py; waited for if
+another job is still making them) into generations/, and, with oracle_labels, once more with the true
+findings into generations_oracle/ (a diagnostic of whether the writer follows its prompt).
+
 Zero-shot is a config with total_steps_per_site: 0. Local-only training is a run with one site, eta_out 1
 and mu 0 (the outer step then returns the site's own parameters).
 """
@@ -92,6 +99,41 @@ def build_model(cfg, store, work_dir):
     return processor, model, (torch.float16 if quant == "nf4" else None)
 
 
+def wait_for(store, path, minutes):
+    """Returns once `path` is in the store; SystemExit after `minutes`."""
+    deadline = time.monotonic() + 60 * minutes
+    while not store.exists(path):
+        if time.monotonic() > deadline:
+            raise SystemExit(f"{path} is still not in the store after {minutes} min; rerun this job once it is")
+        print(f"waiting for {path}", flush=True)
+        time.sleep(60)
+
+
+def dev_hints(dp, store, kind):
+    """({uid: hint tuple}, source record) for the development reports: kind "predictions" (the classifier)
+    or "oracle" (the true findings)."""
+    import hashlib
+    from clinguard.model.classifier import true_hint
+    path = dp["predictions"] if kind == "predictions" else dp["oracle_labels"]
+    raw = store.read_bytes(path)
+    data = json.loads(raw)
+    if kind == "predictions":
+        if data["findings"] != list(dp["findings"]):
+            raise SystemExit(f"{path} names {data['findings']}, the config {dp['findings']}")
+        hints = {u: tuple(f) for u, f in data["development"].items()}
+    else:
+        hints = {u: true_hint(v, dp["findings"]) for u, v in data.items()}
+    return hints, dict(path=path, sha256=hashlib.sha256(raw).hexdigest())
+
+
+def with_hints(examples, hints, what):
+    from dataclasses import replace
+    missing = [e.uid for e in examples if e.uid not in hints]
+    if missing:
+        raise SystemExit(f"{what}: no findings for {len(missing)} studies, e.g. {missing[0]}")
+    return [replace(e, hint=tuple(hints[e.uid])) for e in examples]
+
+
 def write_jsonl(path, rows):
     with open(path, "w", encoding="utf-8") as f:
         for r in rows:
@@ -164,6 +206,20 @@ def main(argv=None):
     objective = cfg.get("objective", "report")
     if objective not in ("report", "findings"):
         raise SystemExit(f"unknown objective '{objective}'")
+    dp = cfg.get("diagnosis_prompt")
+    if dp:                                                  # true findings in the training prompts (I32)
+        from clinguard.data.dataset import HINT_WORDS
+        from clinguard.model.classifier import true_hint
+        if objective != "report" or set(dp["findings"]) - set(HINT_WORDS):
+            raise SystemExit("diagnosis_prompt needs the report objective and findings from dataset.HINT_WORDS")
+        true_hints = {}
+        for key in ("train_labels", "calib_labels"):
+            true_hints.update({u: true_hint(v, dp["findings"]) for u, v in json.loads(store.read_bytes(dp[key])).items()})
+        plain_examples = examples
+
+        def examples(site, role, key):                       # noqa: F811
+            ex = plain_examples(site, role, key)
+            return with_hints(ex, true_hints, f"{site} {role}") if role in ("train", "calibration") else ex
     site_kw = dict(micro_batch=mc["micro_batch"], grad_accum=mc["grad_accum"], lr=mc["lr"],
                    warmup_steps=mc["warmup_steps"], amp_dtype=amp)
     if objective == "report":
@@ -216,20 +272,35 @@ def main(argv=None):
                     f"{run_id}: final phi")
     params.set_phi(params.phi_params(model), phi)
     ev = cfg["eval"]
-    for site in ev.get("dev_sites", []):
-        path = f"{remote}/generations/dev_{site}.jsonl"
-        if store.exists(path):
-            continue
-        dev = examples(site, "development", "dev")
-        texts = generate_findings(model, processor, dev, batch_size=ev.get("gen_batch", 8),
-                                  max_new_tokens=ev.get("max_new_tokens", 160))
-        local = os.path.join(out_dir, "generations", f"dev_{site}.jsonl")
-        os.makedirs(os.path.dirname(local), exist_ok=True)
-        write_jsonl(local, [dict(run_id=run_id, partition=cfg["partition"], site=site, uid=e.uid, group=e.group,
-                                 needs_prior=e.needs_prior, generated=t, reference=e.findings)
-                            for e, t in zip(dev, texts)])
-        lease.renew({path: local}, f"{run_id}: development generations, site {site}")
-        print(f"generated {len(dev)} development reports for site {site}", flush=True)
+    passes = [("generations", None)]
+    if dp:
+        try:                                    # the classifier may still be running on the other GPU
+            wait_for(store, dp["predictions"], dp.get("wait_minutes", 60))
+        except SystemExit:
+            lease.pause()                       # hand the lease back: a rerun continues at once
+            raise
+        passes = [("generations", "predictions")] + ([("generations_oracle", "oracle")] if dp.get("oracle_labels") else [])
+    for folder, kind in passes:
+        hints = source = None
+        for site in ev.get("dev_sites", []):
+            path = f"{remote}/{folder}/dev_{site}.jsonl"
+            if store.exists(path):
+                continue
+            dev = examples(site, "development", "dev")
+            if kind:
+                if hints is None:
+                    hints, source = dev_hints(dp, store, kind)
+                dev = with_hints(dev, hints, f"{site} development ({kind})")
+            texts = generate_findings(model, processor, dev, batch_size=ev.get("gen_batch", 8),
+                                      max_new_tokens=ev.get("max_new_tokens", 160))
+            local = os.path.join(out_dir, folder, f"dev_{site}.jsonl")
+            os.makedirs(os.path.dirname(local), exist_ok=True)
+            extra_cols = (lambda e: dict(hint=list(e.hint), hint_source=source)) if kind else (lambda e: {})
+            write_jsonl(local, [dict(run_id=run_id, partition=cfg["partition"], site=site, uid=e.uid, group=e.group,
+                                     needs_prior=e.needs_prior, generated=t, reference=e.findings, **extra_cols(e))
+                                for e, t in zip(dev, texts)])
+            lease.renew({path: local}, f"{run_id}: development generations ({folder}), site {site}")
+            print(f"generated {len(dev)} development reports for site {site} ({folder})", flush=True)
     lease.finish()
     print(f"{run_id} finished", flush=True)
     return run_id

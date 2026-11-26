@@ -15,6 +15,13 @@ Per report:
 Per group of reports: proxy error rate, CheXbert F1 (micro and macro, 14 and 5 classes; uncertain counts as
 positive, the usual report-generation convention), mean RadGraph rewards, corpus BLEU-4, mean ROUGE-L.
 
+Two baselines (decision I32): "always normal" (asserts no finding) and the best constant report
+CONSTANT_REPORT_V1, the one fixed set of findings that, asserted for every study, makes the fewest proxy_v1
+errors on the CALIBRATION reports. proxy_v1 counts a false finding only where the reference rules the finding
+out, and reports rarely rule out atelectasis, pleural thickening or devices, so naming them for everyone is
+nearly free: that report beats always-normal on the development studies (12 studies fixed, 1 broken,
+p = 0.002) without looking at a single image.
+
 Every group is reported for three subsets (G1 decision): all reports, reports whose reference does not
 need a prior exam, and "novel reference" reports whose reference text never occurs in training.
 """
@@ -29,6 +36,10 @@ CHEXBERT_CLASSES = ["Enlarged Cardiomediastinum", "Cardiomegaly", "Lung Opacity"
 FIVE_CLASSES = ["Cardiomegaly", "Edema", "Consolidation", "Atelectasis", "Pleural Effusion"]
 POS, NEG, UNC, BLANK = 1, 0, -1, ""
 _FINDINGS = [c for c in CHEXBERT_CLASSES if c != "No Finding"]
+# Best constant report: searched over every set of up to 3 findings on the 320 calibration reports
+# (CheXbert labels, labels/chexbert_calibration.json), fewest proxy_v1 errors, ties to the smaller set.
+# Calibration 0.322 vs always-normal 0.350; development 0.306 vs 0.341. Fixed on 2026-11-26.
+CONSTANT_REPORT_V1 = ("Atelectasis", "Pleural Other", "Support Devices")
 
 
 # ------------------------------------------------------------------------------------ per-report rules
@@ -51,6 +62,32 @@ def always_normal_error(ref):
     """proxy_v1 error of a report that asserts no finding (the "always normal" baseline): an error exactly
     when the reference has a positive finding (omitted or contradicted; a false finding is impossible)."""
     return any(ref[CHEXBERT_CLASSES.index(c)] == POS for c in _FINDINGS)
+
+
+def label_report(findings):
+    """CheXbert labels of a report that asserts exactly `findings` and mentions nothing else."""
+    unknown = set(findings) - set(_FINDINGS)
+    if unknown:
+        raise ValueError(f"unknown findings {sorted(unknown)}")
+    return [POS if c in findings else BLANK for c in CHEXBERT_CLASSES]
+
+
+def constant_report_error(ref, findings=CONSTANT_REPORT_V1):
+    """proxy_v1 error of the constant report that asserts `findings` for every study."""
+    return bool(proxy_errors(ref, label_report(findings)))
+
+
+def label_level_check(predicted, ref_labels):
+    """proxy_v1 result if each study's report asserted exactly its predicted findings and nothing else (a
+    writer that copies its diagnosis prompt perfectly). predicted: {uid: [findings]}; ref_labels: {uid: 14 labels}."""
+    uids = [u for u in predicted if u in ref_labels]
+    model = [bool(proxy_errors(ref_labels[u], label_report(predicted[u]))) for u in uids]
+    normal = [always_normal_error(ref_labels[u]) for u in uids]
+    const = [constant_report_error(ref_labels[u]) for u in uids]
+    n = len(uids)
+    return dict(n=n, error_rate=sum(model) / n, always_normal_error_rate=sum(normal) / n,
+                constant_report_error_rate=sum(const) / n, studies_with_a_hint=sum(bool(predicted[u]) for u in uids),
+                vs_always_normal=mcnemar_one_sided(model, normal), vs_constant_report=mcnemar_one_sided(model, const))
 
 
 def asserts_finding(labels):
@@ -163,6 +200,7 @@ def group_metrics(scored):
         proxy_error_rate=sum(s["proxy_error"] for s in scored) / n,
         proxy_errors=sum(s["proxy_error"] for s in scored),
         always_normal_error_rate=sum(always_normal_error(r) for r in refs) / n,
+        constant_report_error_rate=sum(constant_report_error(r) for r in refs) / n,
         share_asserting_a_finding=sum(asserts_finding(h) for h in hyps) / n,
         finding_recall=recalled / len(positives) if positives else None,
         distinct_text_share=len(texts) / n,
@@ -196,8 +234,10 @@ def summarize(scored, training_texts):
                          worst_site=dict(site=worst, proxy_error_rate=rated.get(worst),
                                          always_normal_worst=max(normal.values()) if normal else None),
                          vs_always_normal=mcnemar_one_sided([s["proxy_error"] for s in rows],
-                                                            [always_normal_error(s["ref_labels"]) for s in rows]))
-    return dict(proxy_version=PROXY_VERSION, subsets=out)
+                                                            [always_normal_error(s["ref_labels"]) for s in rows]),
+                         vs_constant_report=mcnemar_one_sided([s["proxy_error"] for s in rows],
+                                                              [constant_report_error(s["ref_labels"]) for s in rows]))
+    return dict(proxy_version=PROXY_VERSION, constant_report=list(CONSTANT_REPORT_V1), subsets=out)
 
 
 # ------------------------------------------------------------------------------------------- labellers

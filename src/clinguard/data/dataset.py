@@ -8,6 +8,12 @@ Prompt `prompt_v1` (frozen at G3):
   system: "You are an expert chest radiologist."
   user:   <image> + "Write the FINDINGS section of the radiology report for this frontal chest X-ray."
 Target: the cleaned FINDINGS. The loss covers only the assistant's answer tokens.
+
+Diagnosis prompt (decision I32, Kaggle session 7): an example may carry a `hint`, a tuple of findings
+(CheXbert class names from HINT_WORDS). The user turn then ends with one more sentence,
+  "Findings suggested by an image classifier: cardiomegaly, pleural effusion."   (or "...: none.")
+In training the hint lists the report's own findings; at generation it lists a classifier's predictions.
+Without a hint the prompt is exactly prompt_v1.
 """
 import functools
 import os
@@ -22,6 +28,20 @@ PROMPT_VERSION = "prompt_v1"
 SYSTEM_PROMPT = "You are an expert chest radiologist."
 USER_PROMPT = "Write the FINDINGS section of the radiology report for this frontal chest X-ray."
 IGNORE_INDEX = -100
+HINT_PROMPT_VERSION = "prompt_v2_hint"
+HINT_PREFIX = "Findings suggested by an image classifier: "
+# Findings a hint can name (CheXbert classes with at least 30 positive training reports), in this order, and
+# the words used for them in the prompt.
+HINT_WORDS = {
+    "Enlarged Cardiomediastinum": "enlarged cardiomediastinal silhouette",
+    "Cardiomegaly": "cardiomegaly",
+    "Lung Opacity": "lung opacity",
+    "Lung Lesion": "lung nodule or mass",
+    "Atelectasis": "atelectasis",
+    "Pleural Effusion": "pleural effusion",
+    "Fracture": "fracture",
+    "Support Devices": "medical device",
+}
 
 
 @dataclass(frozen=True)
@@ -31,6 +51,7 @@ class Example:
     findings: str
     group: str
     needs_prior: bool
+    hint: tuple = None          # findings named in the prompt (diagnosis prompt, I32); None = prompt_v1
 
 
 @functools.lru_cache(maxsize=4)
@@ -68,9 +89,22 @@ def load_image(path):
         return im.convert("RGB")
 
 
-def messages(answer=None):
+def hint_text(hint):
+    """The sentence a hint adds to the prompt; findings in HINT_WORDS order."""
+    unknown = set(hint) - set(HINT_WORDS)
+    if unknown:
+        raise ValueError(f"findings without hint words: {sorted(unknown)}")
+    words = [w for f, w in HINT_WORDS.items() if f in hint]
+    return HINT_PREFIX + (", ".join(words) if words else "none") + "."
+
+
+def user_prompt(hint=None):
+    return USER_PROMPT if hint is None else f"{USER_PROMPT} {hint_text(hint)}"
+
+
+def messages(answer=None, hint=None):
     msgs = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]},
-            {"role": "user", "content": [{"type": "image"}, {"type": "text", "text": USER_PROMPT}]}]
+            {"role": "user", "content": [{"type": "image"}, {"type": "text", "text": user_prompt(hint)}]}]
     if answer is not None:
         msgs.append({"role": "assistant", "content": [{"type": "text", "text": answer}]})
     return msgs
@@ -94,9 +128,10 @@ def build_batch(processor, examples, with_targets=True):
     tok.padding_side = "right" if with_targets else "left"
     try:
         if with_targets:
-            texts = [processor.apply_chat_template(messages(e.findings), tokenize=False) for e in examples]
+            texts = [processor.apply_chat_template(messages(e.findings, e.hint), tokenize=False) for e in examples]
         else:
-            texts = [processor.apply_chat_template(messages(), tokenize=False, add_generation_prompt=True)] * len(examples)
+            texts = [processor.apply_chat_template(messages(hint=e.hint), tokenize=False, add_generation_prompt=True)
+                     for e in examples]
         enc = processor(text=texts, images=images, return_tensors="pt", padding=True)
     finally:
         tok.padding_side = old_side
