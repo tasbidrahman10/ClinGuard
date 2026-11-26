@@ -12,6 +12,9 @@ The target set is a run setting (`lora.targets` in the config; default q/k/v/o).
 projections gate/up/down) uses an A file made by `extend_lora_a`: the q/k/v/o matrices are copied
 unchanged from the primary file and the new ones are drawn with peft's own rule (uniform in
 +-1/sqrt(in_features)) from a generator seeded per module name (scripts/make_lora_a.py, decision I28).
+
+A finished run can be a frozen earlier stage of a new run (`merge_frozen_lora`, decision I31): its LoRA is
+added into the base weights before the new run's own LoRA is created, so phi stays the new run's B matrices.
 """
 import hashlib
 import math
@@ -122,3 +125,25 @@ def load_lora_a(model, path, expected_sha256):
     with torch.no_grad():
         for n, p in params.items():
             p.copy_(saved[n].to(device=p.device, dtype=p.dtype))
+
+
+def merge_frozen_lora(model, phi, a_path, a_sha256, targets):
+    """Adds a finished run's LoRA to the weights of an UNWRAPPED model and returns the plain model, every
+    parameter frozen: W <- W + (alpha / rank) * B A on each target layer, with A from the run's shared file
+    (checksum verified) and B from its phi. The same wrapping as in that run, so phi's order is the same.
+    The target layers must hold floating-point weights (a 4-bit layer cannot take the update exactly)."""
+    from clinguard.model import params
+    modules = dict(model.named_modules())
+    names = target_module_names(model, targets)
+    quantized = [n for n in names if not modules[n].weight.dtype.is_floating_point]
+    if quantized:
+        raise ValueError(f"cannot merge into {len(quantized)} quantized layers, e.g. {quantized[0]}")
+    wrapped = apply_fixed_basis_lora(model, targets=targets)
+    load_lora_a(wrapped, a_path, a_sha256)
+    params.set_phi(params.phi_params(wrapped), phi)
+    merged = wrapped.merge_and_unload(safe_merge=True)
+    if any(".lora_" in n for n, _ in merged.named_parameters()):
+        raise RuntimeError("LoRA modules left after merging")
+    for p in merged.parameters():
+        p.requires_grad = False
+    return merged

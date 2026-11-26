@@ -50,24 +50,45 @@ def git_commit():
         return None
 
 
+def fetch(store, remote, work_dir, sub, sha256=None):
+    """Local copy of a store file under work_dir/sub (downloaded once); checked against sha256 if given."""
+    from clinguard.utils.hashing import sha256_file
+    local = os.path.join(work_dir, sub, os.path.basename(remote))
+    if not os.path.exists(local):
+        store.download(remote, local)
+    if sha256 is not None and sha256_file(local) != sha256:
+        raise ValueError(f"{remote}: checksum does not match the recorded {sha256[:12]}...")
+    return local
+
+
 def build_model(cfg, store, work_dir):
     """(processor, model, amp_dtype) for a run config: base model, LoRA on cfg["lora"]["targets"] (default
-    q/k/v/o), and the shared A matrices downloaded from the store and checked against their SHA-256."""
+    q/k/v/o), and the shared A matrices downloaded from the store and checked against their SHA-256.
+
+    cfg["vision_stage"] (decision I31): a finished run whose LoRA is merged into the base weights first and
+    stays frozen, e.g. the vision side taught in session 5:
+      {run_id, phi_sha256, targets, a_file, a_sha256}"""
     import torch
     from clinguard.model import load, lora
-    mc = cfg["model"]
+    mc, vs = cfg["model"], cfg.get("vision_stage")
     quant = mc.get("quant", "nf4")
+    if vs and quant == "nf4" and not mc.get("vision_fp16", False):
+        raise ValueError("vision_stage needs model.vision_fp16: true (a 4-bit vision tower cannot take the merge)")
     dtype = torch.float16 if quant == "nf4" else torch.float32
     processor = load.load_processor(mc.get("name", load.MODEL_ID), mc.get("revision", load.MODEL_REVISION),
                                     image_pixels=mc["pixels"])
     model = load.load_model(mc.get("name", load.MODEL_ID), mc.get("revision", load.MODEL_REVISION), quant=quant,
                             compute_dtype=dtype, kbit_prepare=mc.get("kbit_prepare", False),
                             vision_fp16=mc.get("vision_fp16", False))
+    if vs:
+        from safetensors.torch import load_file
+        phi_local = fetch(store, f"runs/{vs['run_id']}/phi_final.safetensors", work_dir,
+                          os.path.join("stages", vs["run_id"]), vs["phi_sha256"])
+        model = lora.merge_frozen_lora(model, load_file(phi_local)["phi"], fetch(store, vs["a_file"], work_dir, "shared"),
+                                       vs["a_sha256"], targets=tuple(vs["targets"]))
+        print(f"merged the frozen stage {vs['run_id']} ({', '.join(vs['targets'])})", flush=True)
     model = lora.apply_fixed_basis_lora(model, targets=tuple(cfg["lora"].get("targets", lora.TARGETS)))
-    a_local = os.path.join(work_dir, "shared", os.path.basename(cfg["lora"]["a_file"]))
-    if not os.path.exists(a_local):
-        store.download(cfg["lora"]["a_file"], a_local)
-    lora.load_lora_a(model, a_local, cfg["lora"]["a_sha256"])
+    lora.load_lora_a(model, fetch(store, cfg["lora"]["a_file"], work_dir, "shared"), cfg["lora"]["a_sha256"])
     return processor, model, (torch.float16 if quant == "nf4" else None)
 
 

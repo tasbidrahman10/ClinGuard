@@ -24,14 +24,14 @@ safety, diagnostic validity or privacy guarantees. "ClinGuard" is a working labe
 | `src/clinguard/engine/` | DiLoCo round loop, outer step, weighting, checkpoints, cost accounting |
 | `tests/` | Unit tests, including the manual's Appendix A tests |
 
-## Status (2026-11-24)
+## Status (2026-11-26)
 
 | Phase | State |
 |---|---|
 | 0 Setup | Repository, tests and decision log in place. Open: private Hugging Face repo shared by the three Kaggle accounts, metric packages checked on Kaggle (G0). |
 | 1 Data | **G1 passed (2026-11-20).** Manifests frozen: `skew_v1` `fba077ca06499e73`, `iid_v1` `77e5cd83bdf165f8`; all 3,199 chosen images open. |
 | 2 Engine | **G2 met.** Round loop, Nesterov outer step, uniform / fixed-q / external / loss / random weighting, checkpoint and resume, byte accounting. Tests A.1, A.2, A.3, A.7 pass on toy problems. |
-| 3 Model | **In progress.** Local half done: fixed-basis LoRA, examples and batches, the model-backed site, generation, test A.4; the full pipeline runs and resumes bit for bit on a tiny Qwen2.5-VL with real images. Kaggle sessions 1–4 done: 4-bit fp16 training is stable, 4.3 s per step, resume works. **G3 not yet passed:** no setting beats a model that always writes "normal" (I27), and the vision check shows the base model cannot tell an enlarged heart from a normal one (quantization is not the cause). Next: Kaggle session 5 (`notebooks/kaggle_session5.ipynb`): teach the vision side (I30) and repeat the vision check. |
+| 3 Model | **In progress.** Local half done: fixed-basis LoRA, examples and batches, the model-backed site, generation, test A.4; the full pipeline runs and resumes bit for bit on a tiny Qwen2.5-VL with real images. Kaggle sessions 1–5 done: 4-bit fp16 training is stable, 4.3 s per step, resume works. **G3 not yet passed:** no setting beats a model that always writes "normal" (I27), and the base model cannot tell an enlarged heart from a normal one (quantization is not the cause). Session 5 (I30): trained with a balanced finding-sentence objective, the vision side learns it (AUROC 0.42 → 0.82); trained with the report loss, it does not. Next: Kaggle session 6 (`notebooks/kaggle_session6.ipynb`, I31): keep those eyes frozen and train the language side on reports. |
 | 4 to 8 | Not started. |
 
 Plan v1.1 (2026-11-20): no radiologist in CSE499A, so probes are automatically derived ("silver") and the
