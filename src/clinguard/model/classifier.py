@@ -179,7 +179,7 @@ def summary(clf, dev=None):
             sc = [dev_scores[f][i] for i in idx]
             flags = [m["cutoff"] is not None and v >= m["cutoff"] for v in sc]
             row.update(dev_positive=int(y.sum()), dev_n=len(y), dev_auroc=auroc(sc, y.tolist()),
-                       dev_correct=sum(fl and t for fl, t in zip(flags, y.tolist())),
-                       dev_wrong=sum(fl and not t for fl, t in zip(flags, y.tolist())))
+                       dev_correct=sum(bool(fl and t) for fl, t in zip(flags, y.tolist())),
+                       dev_wrong=sum(bool(fl and not t) for fl, t in zip(flags, y.tolist())))
         out[f] = row
     return out
